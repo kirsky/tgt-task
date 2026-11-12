@@ -112,6 +112,38 @@ final class BitrixClientTest extends TestCase
         self::assertCount(1, $calls);
     }
 
+    /**
+     * Through the Russian SOCKS5 proxy the API is reliable (30/30 measured) if the connect
+     * timeout covers the extra hop; the proxy resolves DNS itself (socks5h) and no address pinning is used.
+     */
+    public function test_curl_options_with_proxy(): void
+    {
+        $o = BitrixClient::curlOptions('a=1', 'socks5h://127.0.0.1:10811', null);
+        self::assertSame('socks5h://127.0.0.1:10811', $o[CURLOPT_PROXY]);
+        self::assertSame(10, $o[CURLOPT_CONNECTTIMEOUT]);
+        self::assertArrayNotHasKey(CURLOPT_RESOLVE, $o);
+        self::assertSame('a=1', $o[CURLOPT_POSTFIELDS]);
+
+        $direct = BitrixClient::curlOptions('a=1', null, 'host:443:1.2.3.4');
+        self::assertArrayNotHasKey(CURLOPT_PROXY, $direct);
+        self::assertSame(['host:443:1.2.3.4'], $direct[CURLOPT_RESOLVE]);
+        self::assertSame(CURL_IPRESOLVE_V4, $direct[CURLOPT_IPRESOLVE]);
+    }
+
+    /**
+     * Through a proxy curl reports connect time 0 even after connecting, so a timeout is NOT
+     * proof that nothing was sent: only explicit connect/proxy errors are retried there.
+     */
+    public function test_not_connected_detection(): void
+    {
+        self::assertTrue(BitrixClient::notConnected(CURLE_COULDNT_CONNECT, 0.0, proxied: false));
+        self::assertTrue(BitrixClient::notConnected(CURLE_OPERATION_TIMEDOUT, 0.0, proxied: false));
+        self::assertFalse(BitrixClient::notConnected(CURLE_OPERATION_TIMEDOUT, 0.3, proxied: false));
+        self::assertFalse(BitrixClient::notConnected(CURLE_OPERATION_TIMEDOUT, 0.0, proxied: true));
+        self::assertTrue(BitrixClient::notConnected(CURLE_COULDNT_CONNECT, 0.0, proxied: true));
+        self::assertTrue(BitrixClient::notConnected(97 /* CURLE_PROXY */, 0.0, proxied: true));
+    }
+
     /** A network failure that persists over all attempts is an outage. */
     public function test_network_error_is_unavailable(): void
     {

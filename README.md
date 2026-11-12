@@ -54,7 +54,7 @@ cp .env.example ../.env   # секреты лежат вне репозитор�
 vendor/bin/phpunit
 ```
 
-Переменные `../.env`: `BITRIX_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_PATH`, `TELEGRAM_WEBHOOK_SECRET`, `PANEL_PASSWORD`, `APP_URL`, `DEMO` (1 — включить демо-панель), `DB_PATH` (необязательно).
+Переменные `../.env`: `BITRIX_WEBHOOK_URL`, `BITRIX_PROXY` (необязательно, например `socks5h://127.0.0.1:10811` — облачный Битрикс24 нестабильно отвечает на запросы из-за рубежа), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_PATH`, `TELEGRAM_WEBHOOK_SECRET`, `PANEL_PASSWORD`, `APP_URL`, `DEMO` (1 — включить демо-панель), `DB_PATH` (необязательно).
 
 - Панель: корень сайта — `public/`, PHP-FPM.
 - Telegram: `webhook/telegram.php` на отдельном пути с HTTPS, затем `php bin/set-webhook.php` (проверка секретного заголовка, только `message` и `callback_query`).

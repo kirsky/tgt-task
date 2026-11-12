@@ -117,10 +117,15 @@ final class Container
         return $this->once('schedule', fn () => new Schedule());
     }
 
-    /** Bitrix24 REST client over the inbound webhook from `BITRIX_WEBHOOK_URL`. */
+    /**
+     * Bitrix24 REST client over the inbound webhook from `BITRIX_WEBHOOK_URL`, optionally
+     * through `BITRIX_PROXY` (e.g. a SOCKS5 proxy in Russia: the portal drops much foreign traffic).
+     */
     public function bitrix(): Bitrix\BitrixClient
     {
-        return $this->once('bitrix', fn () => new Bitrix\BitrixClient($this->cfg->require('BITRIX_WEBHOOK_URL'), $this->kv()));
+        return $this->once('bitrix', fn () => new Bitrix\BitrixClient(
+            $this->cfg->require('BITRIX_WEBHOOK_URL'), $this->kv(), proxy: $this->cfg->get('BITRIX_PROXY'),
+        ));
     }
 
     /** Gateway to Bitrix24 tasks (replaced by a fake in tests). */
