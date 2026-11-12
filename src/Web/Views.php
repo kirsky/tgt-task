@@ -40,6 +40,21 @@ final class Views
         return (string) ob_get_clean();
     }
 
+    /**
+     * Bootstrap badge classes for a status tone from {@see Labels}.
+     *
+     * @param string $tone `ok`, `warn`, `bad` or `wait`.
+     */
+    public static function badge(string $tone): string
+    {
+        return match ($tone) {
+            'ok' => 'badge rounded-pill text-bg-success',
+            'warn' => 'badge rounded-pill text-bg-warning',
+            'bad' => 'badge rounded-pill text-bg-danger',
+            default => 'badge rounded-pill text-bg-secondary',
+        };
+    }
+
     /** HTML-escapes a value for templates. */
     public static function e(mixed $v): string
     {

@@ -1,0 +1,31 @@
+// HR panel theme on top of Bootstrap 5.
+
+$primary: #2563eb;
+$border-radius: .6rem;
+$border-radius-lg: .8rem;
+$font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+@import "bootstrap/scss/bootstrap";
+
+body { background: var(--bs-tertiary-bg); }
+
+.brand-tagline { color: var(--bs-secondary-color); font-weight: 400; }
+
+// KPI tiles
+.kpi .value { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+.kpi .caption { color: var(--bs-secondary-color); font-size: .8rem; }
+
+// probation progress in the list
+.progress.probation { height: 6px; width: 90px; }
+
+// agreement history lines under a question
+.history { font-size: .8rem; color: var(--bs-secondary-color); }
+
+// QR code on the newcomer card
+.qr svg { width: 168px; height: 168px; background: #fff; border-radius: .5rem; padding: .35rem; }
+
+// demo bar
+.demo-bar { border: 1px dashed var(--bs-warning); }
+
+// status pills keep one line
+.badge { white-space: nowrap; font-weight: 500; }

@@ -8,13 +8,22 @@
 use App\Web\Views;
 
 ?>
-<section class="login">
-  <h1>Вход в панель HR</h1>
-  <p class="muted">Договорённости с новичками на испытательном сроке: о чём компания договорилась с новичком на первые недели и что новичок уже подтвердил.</p>
-  <form method="post" action="/login">
-    <input type="hidden" name="csrf" value="<?= Views::e($csrf) ?>">
-    <label>Пароль <input type="password" name="password" autofocus required></label>
-    <?php if ($error): ?><p class="err"><?= Views::e($error) ?></p><?php endif ?>
-    <button>Войти</button>
-  </form>
-</section>
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-4">
+    <div class="card shadow-sm mt-4">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-2">Вход в панель HR</h1>
+        <p class="text-body-secondary small">Договорённости с новичками на испытательном сроке: о чём компания договорилась с новичком на первые недели и что новичок уже подтвердил.</p>
+        <form method="post" action="/login">
+          <input type="hidden" name="csrf" value="<?= Views::e($csrf) ?>">
+          <div class="mb-3">
+            <label for="password" class="form-label">Пароль</label>
+            <input type="password" class="form-control<?= $error ? ' is-invalid' : '' ?>" id="password" name="password" autofocus required>
+            <?php if ($error): ?><div class="invalid-feedback"><?= Views::e($error) ?></div><?php endif ?>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Войти</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,21 @@
+{
+  "name": "tgt-task-panel",
+  "private": true,
+  "description": "HR panel assets: Bootstrap 5 built with webpack 5",
+  "scripts": {
+    "build": "webpack --mode production",
+    "watch": "webpack --mode development --watch"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "^5.3.9"
+  },
+  "devDependencies": {
+    "css-loader": "^7.1.2",
+    "mini-css-extract-plugin": "^2.9.2",
+    "sass": "^1.83.0",
+    "sass-loader": "^16.0.4",
+    "webpack": "^5.112.2",
+    "webpack-cli": "^6.0.1"
+  }
+}

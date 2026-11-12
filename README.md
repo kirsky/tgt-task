@@ -31,7 +31,7 @@
 
 ## Стек
 
-PHP 8.4, SQLite, [Nutgram](https://nutgram.dev) (Telegram), chillerlan/php-qrcode, PHPUnit. Без фреймворка и сборки фронтенда.
+PHP 8.4, SQLite, [Nutgram](https://nutgram.dev) (Telegram), chillerlan/php-qrcode, PHPUnit. Панель — Bootstrap 5, сборка webpack 5 (`assets/` → `public/build/`).
 
 ```
 src/Domain    состояния договорённости и переходы
@@ -41,12 +41,15 @@ src/Bot       бот: тексты, разговор, обработка отв�
 src/Sync      cron: опрос Битрикс24 и отправка вопросов по расписанию
 src/Web       панель HR
 src/Demo      демо-действия и примеры
+templates     страницы панели (Bootstrap 5)
+assets        исходники стилей и JS для webpack
 ```
 
 ## Запуск
 
 ```bash
 composer install
+npm ci && npm run build   # Bootstrap 5 + стили панели → public/build
 cp .env.example ../.env   # секреты лежат вне репозитория
 vendor/bin/phpunit
 ```
@@ -58,7 +61,7 @@ vendor/bin/phpunit
 - Cron:
   ```
   * * * * * cd /path/to/repo && flock -n var/tick.lock php bin/tick.php
-  0 3 * * * cd /path/to/repo && php bin/reset-examples.php
+  0 3 * * * cd /path/to/repo && php bin/reset-examples.php   # необязательно: примеры обновляются и при первом заходе в панель за день
   ```
 
 ## Подключение своего портала Битрикс24

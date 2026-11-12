@@ -8,8 +8,10 @@
 use App\Web\Views;
 
 ?>
-<section class="card-box">
-  <h1><?= Views::e($title) ?></h1>
-  <p><?= Views::e($message) ?></p>
-  <p><a href="/">← К списку</a></p>
-</section>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h1 class="h4"><?= Views::e($title) ?></h1>
+    <p class="mb-3"><?= Views::e($message) ?></p>
+    <a href="/" class="btn btn-outline-primary btn-sm">← К списку</a>
+  </div>
+</div>
