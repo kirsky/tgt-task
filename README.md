@@ -18,13 +18,25 @@
 
 ## Как это выглядит
 
+**Панель HR** — новички на испытательном сроке, показатели и «где договорённости не выполняются с первого раза»; карточка новичка — личная ссылка, QR-код и статус каждой договорённости:
+
 | Панель HR | Карточка новичка |
 |---|---|
-| ![Панель HR](screenshots/panel-list.png) | ![Карточка новичка](screenshots/panel-card.png) |
-| **Telegram: вопросы новичку** | **Битрикс24: задача HR «Закрыто, но не получено»** |
-| ![Telegram](screenshots/telegram-questions.png) | ![Битрикс24](screenshots/bitrix-hr-task.png) |
+| ![Панель HR](screenshots/panel-list.jpg) | ![Карточка новичка](screenshots/panel-card.jpg) |
 
-Короткая запись работы панели: [screenshots/panel-demo.webm](screenshots/panel-demo.webm).
+**Telegram** — приветствие с дорогой и тем, кто встретит; вопросы «Да / Частично / Нет» с уточнением; повторный вопрос после того, как ответственный закрыл задачу:
+
+| Приветствие | Вопросы первого дня | Повторный вопрос |
+|---|---|---|
+| ![Приветствие](screenshots/telegram-welcome.jpg) | ![Вопросы](screenshots/telegram-questions.jpg) | ![Повторный вопрос](screenshots/telegram-recheck.jpg) |
+
+**Битрикс24** — задача «Приём» со ссылкой для новичка, задачи ответственным, комментарий новичка в задаче и задача HR «Закрыто, но не получено»:
+
+| Задача «Приём» | Задачи ответственным |
+|---|---|
+| ![Приём](screenshots/bitrix-hire-task.jpg) | ![Задачи](screenshots/bitrix-tasks-list.jpg) |
+| **Ответ новичка в задаче** | **Задача HR «Закрыто, но не получено»** |
+| ![Комментарий](screenshots/bitrix-task-comment.jpg) | ![Задача HR](screenshots/bitrix-hr-task.jpg) |
 
 ## Гипотеза
 
