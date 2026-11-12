@@ -160,6 +160,20 @@ final class Container
         ));
     }
 
+    /** Bitrix24 polling: new hires, closed tasks, resolved disputes. */
+    public function poller(): Sync\Poller
+    {
+        return $this->once('poller', fn () => new Sync\Poller($this->db(), $this->tasks(), $this->hire(), $this->kv(), $this->clock()));
+    }
+
+    /** Time-driven sending of questions, reminders and retries. */
+    public function dispatcher(): Sync\Dispatcher
+    {
+        return $this->once('dispatcher', fn () => new Sync\Dispatcher(
+            $this->db(), $this->conversation(), $this->answers(), $this->roles(), $this->schedule(), $this->clock(),
+        ));
+    }
+
     /** Public URL of the HR panel, without trailing slash. */
     public function appUrl(): string
     {
