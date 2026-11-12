@@ -1,0 +1,17 @@
+{
+    "name": "kirsky/tgt-task",
+    "description": "Новичок — как договаривались: договорённости с новичком как задачи Битрикс24 + подтверждение в Telegram",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "nutgram/nutgram": "^4.51",
+        "chillerlan/php-qrcode": "^5.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.0"
+    },
+    "autoload": { "psr-4": { "App\\": "src/" } },
+    "autoload-dev": { "psr-4": { "Tests\\": "tests/" } },
+    "config": { "sort-packages": true, "optimize-autoloader": true }
+}
