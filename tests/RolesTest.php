@@ -7,6 +7,9 @@ namespace Tests;
 use App\Roles;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * The agreement lists match the spec (§7) and follow the naming rules.
+ */
 final class RolesTest extends TestCase
 {
     private const ROOT = __DIR__ . '/..';

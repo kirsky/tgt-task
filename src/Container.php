@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App;
 
 /**
- * Lazy service factory, one instance per process. Tests override services via set().
+ * Lazy service factory: builds each service once per process (web request, webhook
+ * call or cron tick). Tests replace services through {@see Container::set()}.
  */
 final class Container
 {
@@ -14,6 +15,11 @@ final class Container
     /** @var array<string,mixed> */
     private array $services = [];
 
+    /**
+     * @param Config     $cfg   Loaded settings.
+     * @param Clock|null $clock Overrides the system clock (tests).
+     * @param \PDO|null  $db    Overrides the SQLite connection (tests).
+     */
     public function __construct(private Config $cfg, ?Clock $clock = null, ?\PDO $db = null)
     {
         if ($clock) {
@@ -24,6 +30,10 @@ final class Container
         }
     }
 
+    /**
+     * Creates the container for real runs (web, webhook, cron) using the `.env`
+     * one level above the repository, or the file named in `APP_ENV_FILE`.
+     */
     public static function boot(): self
     {
         $env = getenv('APP_ENV_FILE') ?: dirname(self::ROOT) . '/.env';
@@ -31,58 +41,81 @@ final class Container
         return new self(Config::load($env));
     }
 
+    /**
+     * Replaces a service, e.g. a fake Bitrix24 gateway or a fake Telegram bot in tests.
+     *
+     * @param string $id Service id (method name, e.g. `tasks`).
+     */
     public function set(string $id, mixed $service): void
     {
         $this->services[$id] = $service;
     }
 
-    /** @template T  @param callable():T $factory  @return T */
+    /**
+     * Returns the cached service or builds it once with the factory.
+     *
+     * @template T
+     * @param callable():T $factory
+     * @return T
+     */
     private function once(string $id, callable $factory): mixed
     {
         return $this->services[$id] ??= $factory();
     }
 
+    /** Application settings. */
     public function config(): Config
     {
         return $this->cfg;
     }
 
+    /** Time source (Europe/Minsk). */
     public function clock(): Clock
     {
         return $this->once('clock', fn () => new SystemClock());
     }
 
+    /** SQLite connection; path from `DB_PATH`, default `var/app.sqlite`. */
     public function db(): \PDO
     {
         return $this->once('db', fn () => Db::open($this->cfg->get('DB_PATH', self::ROOT . '/var/app.sqlite')));
     }
 
+    /** Key/value flags store. */
     public function kv(): Kv
     {
         return $this->once('kv', fn () => new Kv($this->db()));
     }
 
+    /** Agreement lists per role from `config/roles.php`. */
     public function roles(): Roles
     {
         return $this->once('roles', fn () => Roles::load(self::ROOT . '/config/roles.php'));
     }
 
-    /** @return array<string,mixed> */
+    /**
+     * Bitrix24 portal map: owner role → user id, owner titles, creator id.
+     *
+     * @return array<string,mixed>
+     */
     public function portal(): array
     {
         return $this->once('portal', fn () => require self::ROOT . '/config/portal.php');
     }
 
+    /** Date math and quiet-hours rules. */
     public function schedule(): Schedule
     {
         return $this->once('schedule', fn () => new Schedule());
     }
 
+    /** Public URL of the HR panel, without trailing slash. */
     public function appUrl(): string
     {
         return rtrim($this->cfg->get('APP_URL', 'https://novichok.indigit.info'), '/');
     }
 
+    /** Telegram bot username used in invite links. */
     public function botUsername(): string
     {
         return $this->cfg->get('TELEGRAM_BOT_USERNAME', 'novichok_promises_bot');

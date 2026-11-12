@@ -9,6 +9,9 @@ use App\Db;
 use App\Kv;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Schema, key/value store and config loading.
+ */
 final class DbTest extends TestCase
 {
     public function test_migrate_creates_tables(): void

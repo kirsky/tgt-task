@@ -8,8 +8,15 @@ use App\Config;
 use App\Container;
 use App\Db;
 
+/**
+ * Builds a fully wired container for tests: in-memory SQLite, frozen clock,
+ * fake Bitrix24 gateway (once it exists) and safe demo settings.
+ */
 final class TestApp
 {
+    /**
+     * @param string $now Moment the frozen clock starts at.
+     */
     public static function make(string $now = '2026-11-17T10:00:00+03:00'): Container
     {
         $c = new Container(

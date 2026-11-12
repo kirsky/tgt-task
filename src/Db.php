@@ -4,8 +4,19 @@ declare(strict_types=1);
 
 namespace App;
 
+/**
+ * SQLite connection factory and schema.
+ *
+ * The local database is the source of truth: Bitrix24 is synced from it, so the panel
+ * and the bot keep working (read-only) when the Bitrix24 trial ends.
+ */
 final class Db
 {
+    /**
+     * Opens (and creates, if needed) the database and brings the schema up to date.
+     *
+     * @param string $path File path, or `:memory:` for tests.
+     */
     public static function open(string $path): \PDO
     {
         if ($path !== ':memory:' && !is_dir(dirname($path))) {
@@ -25,6 +36,18 @@ final class Db
         return $pdo;
     }
 
+    /**
+     * Creates all tables if they do not exist. Safe to run repeatedly.
+     *
+     * Tables:
+     * - `newcomers`: a person on probation, their invite code and Telegram chat;
+     * - `agreements`: one row per agreement of the newcomer's role, its state and pending prompt;
+     * - `answers`: every Да/Частично/Нет with the optional note and the Bitrix24 effects to apply;
+     * - `disputes`: «закрыто, но не получено» cases handed to HR;
+     * - `chat_state`: whether the bot is waiting for a free-text note in a chat;
+     * - `kv`: small key/value flags (last seen hire task, Bitrix24 outage);
+     * - `processed_hire_tasks`: hire tasks already handled, so none is processed twice.
+     */
     public static function migrate(\PDO $db): void
     {
         $db->exec(<<<'SQL'
