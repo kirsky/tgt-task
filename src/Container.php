@@ -138,6 +138,14 @@ final class Container
         ));
     }
 
+    /** Applies newcomers' answers to local state and Bitrix24. */
+    public function answers(): Bot\AnswerService
+    {
+        return $this->once('answers', fn () => new Bot\AnswerService(
+            $this->db(), $this->tasks(), $this->roles(), $this->portal(), $this->clock(), $this->appUrl(),
+        ));
+    }
+
     /** Public URL of the HR panel, without trailing slash. */
     public function appUrl(): string
     {
