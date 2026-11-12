@@ -146,6 +146,20 @@ final class Container
         ));
     }
 
+    /** Telegram bot client (replaced by `Nutgram::fake()` in tests). */
+    public function bot(): \SergiX44\Nutgram\Nutgram
+    {
+        return $this->once('bot', fn () => new \SergiX44\Nutgram\Nutgram($this->cfg->require('TELEGRAM_BOT_TOKEN')));
+    }
+
+    /** The newcomer-facing conversation (questions, answers, notes). */
+    public function conversation(): Bot\Conversation
+    {
+        return $this->once('conversation', fn () => new Bot\Conversation(
+            $this->db(), $this->bot(), $this->answers(), $this->roles(), $this->schedule(), $this->clock(),
+        ));
+    }
+
     /** Public URL of the HR panel, without trailing slash. */
     public function appUrl(): string
     {
