@@ -9,6 +9,7 @@ use App\Bot\Conversation;
 use App\Clock;
 use App\Roles;
 use App\Schedule;
+use SergiX44\Nutgram\Telegram\Exceptions\TelegramException;
 
 /**
  * Time-driven part of the cron tick: for every connected newcomer, queue what became due,
@@ -31,31 +32,60 @@ final class Dispatcher
     }
 
     /**
-     * Runs one pass over all connected, non-example newcomers, then retries Bitrix24 effects
-     * that failed earlier.
+     * Runs one pass over all connected, non-example newcomers, then finalizes answers whose
+     * note never came and retries Bitrix24 effects that failed earlier.
      */
     public function run(): void
     {
         $now = $this->clock->now();
         $newcomers = $this->db->query('SELECT id, role_key, tg_chat_id FROM newcomers WHERE is_example = 0 AND tg_chat_id IS NOT NULL')->fetchAll();
         foreach ($newcomers as $n) {
-            $role = $this->roles->get($n['role_key']);
-            $chat = (int) $n['tg_chat_id'];
-            $this->conversation->expireStaleNote($chat);
-            $this->conversation->queueDue((int) $n['id']);
-
-            $open = $this->db->query("SELECT id, prompt_kind, prompt_sent_at, reminded_at FROM agreements WHERE newcomer_id = {$n['id']} AND prompt_sent_at IS NOT NULL")->fetch();
-            if ($open) {
-                $sentAt = new \DateTimeImmutable($open['prompt_sent_at']);
-                if ($now >= $sentAt->modify(self::NO_ANSWER_AFTER)) {
-                    $this->expire($open);
-                } elseif ($open['reminded_at'] === null && $now >= $this->schedule->reminderAt($role, $sentAt) && $this->schedule->windowOpen($role, $now)) {
-                    $this->conversation->resend((int) $open['id']);
+            // One newcomer's failure (e.g. they blocked the bot) must not stop the others.
+            try {
+                $this->runFor($n, $now);
+            } catch (TelegramException $e) {
+                if ($e->getCode() === 403) {
+                    $this->db->prepare('UPDATE newcomers SET tg_chat_id = NULL WHERE id = ?')->execute([$n['id']]);
                 }
+                $this->log("newcomer {$n['id']}: telegram " . $e->getCode() . ' ' . $e->getMessage());
+            } catch (\Throwable $e) {
+                $this->log("newcomer {$n['id']}: " . get_class($e) . ' ' . $e->getMessage());
             }
-            $this->conversation->pump($chat);
         }
+        $this->answers->finalizeStale($now->modify('-' . Conversation::NOTE_WAIT));
         $this->answers->retryPending();
+    }
+
+    /**
+     * One newcomer's pass: stale note, due questions, reminder or expiry, next question.
+     *
+     * @param array<string,mixed> $n Newcomer row (id, role_key, tg_chat_id).
+     */
+    private function runFor(array $n, \DateTimeImmutable $now): void
+    {
+        $role = $this->roles->get($n['role_key']);
+        $chat = (int) $n['tg_chat_id'];
+        $this->conversation->expireStaleNote($chat);
+        $this->conversation->queueDue((int) $n['id']);
+
+        $open = $this->db->query("SELECT id, prompt_kind, prompt_sent_at, reminded_at FROM agreements WHERE newcomer_id = {$n['id']} AND prompt_sent_at IS NOT NULL")->fetch();
+        if ($open) {
+            $sentAt = new \DateTimeImmutable($open['prompt_sent_at']);
+            if ($now >= $sentAt->modify(self::NO_ANSWER_AFTER)) {
+                $this->expire($open);
+            } elseif ($open['reminded_at'] === null && $now >= $this->schedule->reminderAt($role, $sentAt) && $this->schedule->windowOpen($role, $now)) {
+                $this->conversation->resend((int) $open['id']);
+            }
+        }
+        $this->conversation->pump($chat);
+    }
+
+    /** Appends a line to `var/log/dispatcher.log`. */
+    private function log(string $msg): void
+    {
+        $dir = \App\Container::ROOT . '/var/log';
+        is_dir($dir) || @mkdir($dir, 0775, true);
+        @file_put_contents("$dir/dispatcher.log", date('c') . " $msg\n", FILE_APPEND);
     }
 
     /**

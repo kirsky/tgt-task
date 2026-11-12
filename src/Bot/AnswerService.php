@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Bot;
 
+use App\Bitrix\BitrixError;
 use App\Bitrix\BitrixUnavailable;
 use App\Bitrix\Tasks;
 use App\Clock;
@@ -64,10 +65,17 @@ final class AnswerService
         $now = $this->now();
 
         $this->db->beginTransaction();
-        $this->db->prepare(
+        // Guarded by the state we decided on: a concurrent tap or the cron changing it first wins.
+        $upd = $this->db->prepare(
             'UPDATE agreements SET state = ?, first_answer = COALESCE(first_answer, ?), prompt_kind = NULL, prompt_intro = 0,
-             prompt_queued_at = NULL, prompt_sent_at = NULL, reminded_at = NULL, updated_at = ? WHERE id = ?'
-        )->execute([$next->value, $recheck ? null : $answer->value, $now, $agreementId]);
+             prompt_queued_at = NULL, prompt_sent_at = NULL, reminded_at = NULL, updated_at = ? WHERE id = ? AND state = ?'
+        );
+        $upd->execute([$next->value, $recheck ? null : $answer->value, $now, $agreementId, $current->value]);
+        if ($upd->rowCount() === 0) {
+            $this->db->rollBack();
+
+            return ['status' => 'ignored'];
+        }
         $this->db->prepare('INSERT INTO answers(agreement_id, kind, answer, effects, created_at) VALUES(?,?,?,?,?)')
             ->execute([$agreementId, $recheck ? 'recheck' : 'initial', $answer->value, json_encode(array_map(fn (Effect $e) => $e->value, $effects)), $now]);
         $answerId = (int) $this->db->lastInsertId();
@@ -105,14 +113,33 @@ final class AnswerService
         $ids = $this->db->query('SELECT id FROM answers WHERE finalized_at IS NOT NULL AND effects_applied_at IS NULL ORDER BY id')->fetchAll(\PDO::FETCH_COLUMN);
         $applied = 0;
         foreach ($ids as $id) {
-            if ($this->applyEffects((int) $id)) {
-                $applied++;
-            } else {
-                break; // still down; try again next tick
+            if (!$this->applyEffects((int) $id)) {
+                break; // Bitrix24 still down; try again next tick
             }
+            $applied++;
         }
 
         return $applied;
+    }
+
+    /**
+     * Finalizes answers whose note never came (e.g. the chat was re-bound or abandoned),
+     * so their Bitrix24 effects are not lost.
+     *
+     * @param \DateTimeImmutable $before Answers created before this moment are finalized without a note.
+     * @return int Number of answers finalized.
+     */
+    public function finalizeStale(\DateTimeImmutable $before): int
+    {
+        $st = $this->db->prepare('SELECT id FROM answers WHERE finalized_at IS NULL AND created_at < ?');
+        $st->execute([$before->format(DATE_ATOM)]);
+        $ids = $st->fetchAll(\PDO::FETCH_COLUMN);
+        foreach ($ids as $id) {
+            $this->db->prepare('UPDATE chat_state SET awaiting_note_answer_id = NULL WHERE awaiting_note_answer_id = ?')->execute([$id]);
+            $this->finalize((int) $id, null);
+        }
+
+        return count($ids);
     }
 
     /**
@@ -131,10 +158,14 @@ final class AnswerService
             return true;
         }
         $task = (int) $row['bitrix_task_id'];
-        $suffix = $row['note'] !== null ? ": «{$row['note']}»" : '.';
+        $suffix = $row['note'] !== null ? ': «' . self::plain($row['note']) . '»' : '.';
+        $effects = json_decode($row['effects'], true);
+        $done = (int) $row['effects_done'];
+        $progress = $this->db->prepare('UPDATE answers SET effects_done = ? WHERE id = ?');
 
         try {
-            foreach (json_decode($row['effects'], true) as $effect) {
+            // Resume after the last effect that succeeded, so a retry never repeats a complete or a comment.
+            foreach (array_slice($effects, $done) as $effect) {
                 match (Effect::from($effect)) {
                     Effect::CompleteTask => $this->tasks->complete($task),
                     Effect::CommentConfirmed => $this->tasks->comment($task, 'Новичок подтвердил получение.'),
@@ -142,9 +173,16 @@ final class AnswerService
                     Effect::CommentNotReceived => $this->tasks->comment($task, 'Новичок пока не получил' . $suffix),
                     Effect::CreateHrTask => $this->createHrTask($row, $task, $suffix),
                 };
+                $progress->execute([++$done, $answerId]);
             }
         } catch (BitrixUnavailable) {
             return false;
+        } catch (BitrixError $e) {
+            // Permanent (e.g. the task was deleted): record it and move on instead of retrying forever.
+            $this->db->prepare('UPDATE answers SET effects_error = ?, effects_applied_at = ? WHERE id = ?')
+                ->execute([mb_substr($e->getMessage(), 0, 300), $this->now(), $answerId]);
+
+            return true;
         }
         $this->db->prepare('UPDATE answers SET effects_applied_at = ? WHERE id = ?')->execute([$this->now(), $answerId]);
 
@@ -171,6 +209,15 @@ final class AnswerService
         ]);
         $this->db->prepare('INSERT OR IGNORE INTO disputes(agreement_id, bitrix_task_id, created_at) VALUES(?,?,?)')
             ->execute([$row['agreement_id'], $id, $this->now()]);
+    }
+
+    /**
+     * Neutralizes Bitrix24 BBCode in user text (e.g. `[USER=19]` would mention someone),
+     * keeping it readable: `[` becomes a full-width bracket.
+     */
+    private static function plain(string $text): string
+    {
+        return str_replace(['[', ']'], ['［', '］'], $text);
     }
 
     /** Current time as ISO string. */

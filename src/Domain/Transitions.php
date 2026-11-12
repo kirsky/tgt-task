@@ -34,6 +34,11 @@ final class Transitions
         if (!in_array($current, self::OPEN_ASKED, true)) {
             return [$current, []];
         }
+        // Already reported as not received: only a later «Да» changes anything, so repeated
+        // «Нет»/«Частично» (old buttons, reminders) never add duplicate comments.
+        if ($current === State::NotReceived && $answer !== Answer::Yes) {
+            return [$current, []];
+        }
 
         return match ($answer) {
             Answer::Yes => [State::Confirmed, [Effect::CompleteTask, Effect::CommentConfirmed]],

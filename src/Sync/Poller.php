@@ -49,6 +49,26 @@ final class Poller
     }
 
     /**
+     * Finishes hires that stopped halfway (Bitrix24 failed after the newcomer was created, e.g.
+     * during a demo hire): creates the missing owner tasks and posts the invite comment.
+     *
+     * @return int Number of hires completed now.
+     * @throws \App\Bitrix\BitrixUnavailable When the portal is still down.
+     */
+    public function resumeIncompleteHires(): int
+    {
+        $ids = $this->db->query(
+            "SELECT n.hire_task_id FROM newcomers n LEFT JOIN processed_hire_tasks p ON p.task_id = n.hire_task_id
+             WHERE n.is_example = 0 AND n.hire_task_id IS NOT NULL AND p.task_id IS NULL"
+        )->fetchAll(\PDO::FETCH_COLUMN);
+        foreach ($ids as $taskId) {
+            $this->hire->process((int) $taskId, '', '');
+        }
+
+        return count($ids);
+    }
+
+    /**
      * Moves the hire cursor forward (never back), e.g. after the demo created a hire task itself.
      */
     public function advanceCursor(int $taskId): void
@@ -95,10 +115,12 @@ final class Poller
             return;
         }
         $now = $this->clock->now()->format(DATE_ATOM);
+        // Guarded by the state read before the Bitrix24 call: if the newcomer confirmed meanwhile
+        // (and our own completion is what we just read back), nothing changes.
         $this->db->prepare(
             "UPDATE agreements SET state = 'owner_closed', owner_closed_at = ?, prompt_kind = NULL, prompt_intro = 0,
-             prompt_queued_at = NULL, prompt_sent_at = NULL, reminded_at = NULL, updated_at = ? WHERE id = ?"
-        )->execute([$now, $now, $agreementId]);
+             prompt_queued_at = NULL, prompt_sent_at = NULL, reminded_at = NULL, updated_at = ? WHERE id = ? AND state = ?"
+        )->execute([$now, $now, $agreementId, $current->value]);
     }
 
     /**

@@ -132,7 +132,8 @@ final class AnswerServiceTest extends TestCase
         $stored = (string) $this->c->db()->query('SELECT note FROM answers WHERE id = ' . $r['answerId'])->fetchColumn();
         self::assertSame(500, mb_strlen($stored));
         self::assertStringStartsWith('<b>&[url]', $stored);
-        self::assertStringContainsString('<b>&[url]', $this->tasks->callsOf('comment')[0][1]);
+        // BBCode is neutralized so a note cannot mention people or format the comment
+        self::assertStringContainsString('<b>&［url］', $this->tasks->callsOf('comment')[0][1]);
     }
 
     /** The first initial answer is remembered for the «✓ со 2-го раза» label. */

@@ -66,9 +66,15 @@ final class Conversation
 
             return;
         }
+        $this->finishPendingNote($chatId);
         $this->db->prepare('UPDATE newcomers SET tg_chat_id = NULL WHERE tg_chat_id = ? AND id <> ?')->execute([$chatId, $n['id']]);
-        $this->db->prepare('UPDATE newcomers SET tg_chat_id = ? WHERE id = ?')->execute([$chatId, $n['id']]);
-        $this->setAwaitingNote($chatId, null);
+        $bind = $this->db->prepare('UPDATE newcomers SET tg_chat_id = ? WHERE id = ? AND (tg_chat_id IS NULL OR tg_chat_id = ?)');
+        $bind->execute([$chatId, $n['id'], $chatId]);
+        if ($bind->rowCount() === 0) {
+            $this->say($chatId, Texts::linkUsed()); // another account bound it a moment earlier
+
+            return;
+        }
 
         $role = $this->roles->get($n['role_key']);
         $today = $this->clock->now()->format('Y-m-d');
@@ -99,6 +105,7 @@ final class Conversation
             return;
         }
         if ($r['status'] === 'needs_note') {
+            $this->finishPendingNote($chatId);
             $this->setAwaitingNote($chatId, $r['answerId']);
             $this->say($chatId, Texts::askNote(), [[InlineKeyboardButton::make(Texts::SKIP, callback_data: 'skip:' . $r['answerId'])]]);
 
@@ -306,6 +313,19 @@ final class Conversation
         $st->execute([$agreementId, $chatId]);
 
         return $st->fetch() ?: null;
+    }
+
+    /**
+     * If a note is still awaited in this chat, finalizes that answer without it, so its
+     * Bitrix24 effects (comment or HR task) are never lost when the conversation moves on.
+     */
+    private function finishPendingNote(int $chatId): void
+    {
+        $pending = $this->awaitingNote($chatId);
+        if ($pending !== null) {
+            $this->setAwaitingNote($chatId, null);
+            $this->answers->finalize($pending, null);
+        }
     }
 
     /** Answer id whose note the bot is waiting for in this chat, if any. */

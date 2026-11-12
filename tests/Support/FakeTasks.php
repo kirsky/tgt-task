@@ -11,7 +11,7 @@ use App\Bitrix\Tasks;
  * In-memory Bitrix24 tasks for tests: records every call, hands out ids from 1000,
  * lets a test set statuses and simulate an outage on the n-th call.
  */
-final class FakeTasks implements Tasks
+class FakeTasks implements Tasks
 {
     /** @var list<array{0:string,1:array}> Every call as [method, args]. */
     public array $calls = [];

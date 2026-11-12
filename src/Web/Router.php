@@ -110,6 +110,7 @@ final class Router
     {
         $c = $this->c;
         $now = $c->clock()->now();
+        $this->refreshExamplesDaily();
         $rows = $c->db()->query('SELECT * FROM newcomers ORDER BY is_example, start_date DESC, id DESC')->fetchAll();
         $list = [];
         foreach ($rows as $n) {
@@ -128,6 +129,19 @@ final class Router
             'demoName' => self::DEMO_NAMES[array_rand(self::DEMO_NAMES)],
             'today' => $now->format('Y-m-d'),
         ], $session);
+    }
+
+    /**
+     * Rebuilds the example newcomers on the first visit of a day, so their «день N» stays
+     * fixed whatever the date (in addition to the nightly cron, which may not be installed).
+     */
+    private function refreshExamplesDaily(): void
+    {
+        $today = $this->c->clock()->now()->format('Y-m-d');
+        if ($this->c->kv()->get('examples_date') !== $today) {
+            \App\Demo\Examples::reset($this->c->db(), $this->c->roles(), $this->c->schedule(), $this->c->clock());
+            $this->c->kv()->set('examples_date', $today);
+        }
     }
 
     /**
@@ -211,8 +225,8 @@ final class Router
         if (!$n['is_example'] && $taskIds !== []) {
             try {
                 $live = $c->tasks()->statuses($taskIds);
-            } catch (BitrixUnavailable) {
-                $live = null;
+            } catch (BitrixUnavailable|\App\Bitrix\BitrixError) {
+                $live = null; // the card still renders from local data
             }
         }
         $link = $n['is_example'] ? null : $c->hire()->inviteLink($n['invite_code']);
@@ -256,6 +270,7 @@ final class Router
         }
         if ($path === '/demo/reset-examples') {
             \App\Demo\Examples::reset($this->c->db(), $this->c->roles(), $this->c->schedule(), $this->c->clock());
+            $this->c->kv()->set('examples_date', $this->c->clock()->now()->format('Y-m-d'));
 
             return Response::redirect('/');
         }

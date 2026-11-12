@@ -42,7 +42,8 @@ final class Db
      * Tables:
      * - `newcomers`: a person on probation, their invite code and Telegram chat;
      * - `agreements`: one row per agreement of the newcomer's role, its state and pending prompt;
-     * - `answers`: every Да/Частично/Нет with the optional note and the Bitrix24 effects to apply;
+     * - `answers`: every Да/Частично/Нет with the optional note, the Bitrix24 effects to apply,
+     *   how many of them are done and a permanent error if one failed for good;
      * - `disputes`: «закрыто, но не получено» cases handed to HR;
      * - `chat_state`: whether the bot is waiting for a free-text note in a chat;
      * - `kv`: small key/value flags (last seen hire task, Bitrix24 outage);
@@ -78,5 +79,13 @@ final class Db
               task_id INTEGER PRIMARY KEY, status TEXT NOT NULL, newcomer_id INTEGER NULL, processed_at TEXT NOT NULL
             );
             SQL);
+        // Added after the final review: per-effect progress and permanent errors of answers.
+        $cols = array_column($db->query('PRAGMA table_info(answers)')->fetchAll(\PDO::FETCH_ASSOC), 'name');
+        if (!in_array('effects_done', $cols, true)) {
+            $db->exec('ALTER TABLE answers ADD COLUMN effects_done INTEGER NOT NULL DEFAULT 0');
+        }
+        if (!in_array('effects_error', $cols, true)) {
+            $db->exec('ALTER TABLE answers ADD COLUMN effects_error TEXT NULL');
+        }
     }
 }

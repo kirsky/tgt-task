@@ -18,6 +18,7 @@ $url = "https://$host/" . $c->config()->require('TELEGRAM_WEBHOOK_PATH');
 
 $c->bot()->setWebhook(
     url: $url,
+    max_connections: 1, // one update at a time: no webhook/webhook races on the same chat
     allowed_updates: ['message', 'callback_query'],
     drop_pending_updates: true,
     secret_token: $c->config()->require('TELEGRAM_WEBHOOK_SECRET'),

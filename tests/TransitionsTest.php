@@ -26,9 +26,14 @@ final class TransitionsTest extends TestCase
     {
         foreach ([State::Asked, State::NotReceived, State::NoAnswer] as $s) {
             yield "{$s->value}+yes" => [$s, Answer::Yes, State::Confirmed, [Effect::CompleteTask, Effect::CommentConfirmed]];
+        }
+        foreach ([State::Asked, State::NoAnswer] as $s) {
             yield "{$s->value}+partial" => [$s, Answer::Partial, State::NotReceived, [Effect::CommentPartial]];
             yield "{$s->value}+no" => [$s, Answer::No, State::NotReceived, [Effect::CommentNotReceived]];
         }
+        // final review #5: repeated «Нет»/«Частично» after «не получено» changes nothing
+        yield 'not_received+partial ignored' => [State::NotReceived, Answer::Partial, State::NotReceived, []];
+        yield 'not_received+no ignored' => [State::NotReceived, Answer::No, State::NotReceived, []];
         yield 'owner_closed+yes' => [State::OwnerClosed, Answer::Yes, State::Confirmed, [Effect::CommentConfirmed]];
         yield 'owner_closed+partial' => [State::OwnerClosed, Answer::Partial, State::Disputed, [Effect::CreateHrTask]];
         yield 'owner_closed+no' => [State::OwnerClosed, Answer::No, State::Disputed, [Effect::CreateHrTask]];

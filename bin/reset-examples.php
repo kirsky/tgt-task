@@ -14,4 +14,5 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 $c = Container::boot();
 Examples::reset($c->db(), $c->roles(), $c->schedule(), $c->clock());
+$c->kv()->set('examples_date', $c->clock()->now()->format('Y-m-d'));
 echo "examples reset\n";
