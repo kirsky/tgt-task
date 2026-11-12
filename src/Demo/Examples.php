@@ -19,23 +19,29 @@ use App\Schedule;
 final class Examples
 {
     /**
-     * Example definitions: name, role, probation day today, connected flag, and per-agreement
-     * outcome overrides (`key => [state, initialAnswer, note, recheckAnswer, recheckNote]`).
-     * Items not listed are confirmed if already asked, scheduled otherwise.
+     * Example definitions: name, role, probation day today, whether the bot is connected,
+     * and per-agreement outcome overrides `key => [state, initialAnswer, note, recheckAnswer, recheckNote]`.
+     * Items not listed are confirmed if already asked (asked-but-unanswered when not connected),
+     * scheduled otherwise.
+     *
+     * @return list<array{0: string, 1: string, 2: int, 3: bool, 4: array<string, array{0: string, 1: ?string, 2: ?string, 3: ?string, 4: ?string}>}>
      */
-    private const SET = [
-        ['Петров Алексей', 'warehouse_picker', 2, true, [
-            'workwear' => ['confirmed', 'partial', 'обуви моего размера нет', 'yes', null],
-        ]],
-        ['Ковальчук Дмитрий', 'warehouse_picker', 34, true, [
-            'scanner' => ['disputed', 'no', 'логина ещё нет', 'no', 'логин не работает'],
-        ]],
-        ['Иванова Марина', 'store_seller', 12, true, [
-            'schedule' => ['not_received', 'partial', 'знаю только на неделю вперёд', null, null],
-        ]],
-        ['Новик Павел', 'warehouse_picker', 5, false, []],
-        ['Савич Анна', 'store_seller', 68, true, []],
-    ];
+    private static function set(): array
+    {
+        return [
+            ['Петров Алексей', 'warehouse_picker', 2, true, [
+                'workwear' => ['confirmed', 'partial', 'обуви моего размера нет', 'yes', null],
+            ]],
+            ['Ковальчук Дмитрий', 'warehouse_picker', 34, true, [
+                'scanner' => ['disputed', 'no', 'логина ещё нет', 'no', 'логин не работает'],
+            ]],
+            ['Иванова Марина', 'store_seller', 12, true, [
+                'schedule' => ['not_received', 'partial', 'знаю только на неделю вперёд', null, null],
+            ]],
+            ['Новик Павел', 'warehouse_picker', 5, false, []],
+            ['Савич Анна', 'store_seller', 68, true, []],
+        ];
+    }
 
     /**
      * Deletes previous examples (real newcomers are untouched) and creates the set anew
@@ -48,7 +54,7 @@ final class Examples
         $db->beginTransaction();
         $db->exec('DELETE FROM newcomers WHERE is_example = 1');
 
-        foreach (self::SET as $i => [$name, $roleKey, $day, $connected, $overrides]) {
+        foreach (self::set() as $i => [$name, $roleKey, $day, $connected, $overrides]) {
             $role = $roles->get($roleKey);
             $start = (new \DateTimeImmutable($today))->modify('-' . ($day - 1) . ' days')->format('Y-m-d');
             $db->prepare('INSERT INTO newcomers(full_name, first_name, role_key, start_date, invite_code, tg_chat_id, is_example, created_at) VALUES(?,?,?,?,?,?,1,?)')

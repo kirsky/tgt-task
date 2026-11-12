@@ -32,20 +32,20 @@ final class SyncTest extends TestCase
     protected function setUp(): void
     {
         $this->c = TestApp::make('2026-11-17T20:20:00+03:00');
-        $this->clock = $this->c->clock();
+        $this->clock = TestApp::clock($this->c);
         $this->bot = Nutgram::fake();
         $this->bot->setCommonUser(User::make(self::CHAT, false, 'Тест'));
         $this->bot->setCommonChat(Chat::make(self::CHAT, 'private'));
         $this->c->set('bot', $this->bot);
         Handlers::register($this->bot, $this->c);
-        $this->tasks = $this->c->tasks();
-        $this->newcomerId = $this->c->hire()->process(77, 'Приём: Петров Алексей', "Должность: Кладовщик-комплектовщик\nПодразделение: Склад\nДата выхода: 17.11.2026");
+        $this->tasks = TestApp::tasks($this->c);
+        $this->newcomerId = TestApp::id($this->c->hire()->process(77, 'Приём: Петров Алексей', "Должность: Кладовщик-комплектовщик\nПодразделение: Склад\nДата выхода: 17.11.2026"));
     }
 
     /** Connects the newcomer (as if they pressed Start) and answers all day-1 questions «Да». */
     private function connectAndAnswerDay1(): void
     {
-        $code = $this->c->db()->query("SELECT invite_code FROM newcomers WHERE id = {$this->newcomerId}")->fetchColumn();
+        $code = \App\Sql::value($this->c->db(), "SELECT invite_code FROM newcomers WHERE id = {$this->newcomerId}");
         $this->bot->hearText("/start $code")->reply();
         foreach (['met', 'workwear', 'mentor'] as $k) {
             $this->bot->hearCallbackQueryData("a:{$this->id($k)}:yes")->reply();
@@ -54,15 +54,19 @@ final class SyncTest extends TestCase
 
     private function id(string $key): int
     {
-        return (int) $this->c->db()->query("SELECT id FROM agreements WHERE newcomer_id = {$this->newcomerId} AND key = '$key'")->fetchColumn();
+        return (int) \App\Sql::value($this->c->db(), "SELECT id FROM agreements WHERE newcomer_id = {$this->newcomerId} AND key = '$key'");
     }
 
     private function task(string $key): int
     {
-        return (int) $this->c->db()->query("SELECT bitrix_task_id FROM agreements WHERE id = {$this->id($key)}")->fetchColumn();
+        return (int) \App\Sql::value($this->c->db(), "SELECT bitrix_task_id FROM agreements WHERE id = {$this->id($key)}");
     }
 
-    /** Runs one tick at a given Minsk time and returns the texts the bot sent during it. */
+    /**
+     * Runs one tick at a given Minsk time and returns the texts the bot sent during it.
+     *
+     * @return list<string>
+     */
     private function tickAt(string $local): array
     {
         $this->clock->set($local . '+03:00');
@@ -84,7 +88,7 @@ final class SyncTest extends TestCase
     /** A task completed by its owner leads to a re-check, sent inside the window. */
     public function test_owner_closed_queues_recheck_and_sends_in_window(): void
     {
-        $code = $this->c->db()->query("SELECT invite_code FROM newcomers WHERE id = {$this->newcomerId}")->fetchColumn();
+        $code = \App\Sql::value($this->c->db(), "SELECT invite_code FROM newcomers WHERE id = {$this->newcomerId}");
         $this->bot->hearText("/start $code")->reply();
         $this->bot->hearCallbackQueryData("a:{$this->id('met')}:yes")->reply();
         $this->bot->hearCallbackQueryData("a:{$this->id('workwear')}:partial")->reply();
@@ -93,7 +97,7 @@ final class SyncTest extends TestCase
 
         $this->tasks->status[$this->task('workwear')] = 5;
         self::assertSame(['Отмечено, что спецодежду и обувь выдали. Всё так?'], $this->tickAt('2026-11-17T21:00:00'));
-        self::assertSame('owner_closed', $this->c->db()->query("SELECT state FROM agreements WHERE id = {$this->id('workwear')}")->fetchColumn());
+        self::assertSame('owner_closed', \App\Sql::value($this->c->db(), "SELECT state FROM agreements WHERE id = {$this->id('workwear')}"));
     }
 
     /** Nothing is sent after 22:00; the queued question goes out when the window opens at 06:00. */
@@ -143,7 +147,7 @@ final class SyncTest extends TestCase
         $this->connectAndAnswerDay1();
         $this->tickAt('2026-11-19T20:15:00');
         $sent = $this->tickAt('2026-11-21T20:15:00');
-        self::assertSame('no_answer', $this->c->db()->query("SELECT state FROM agreements WHERE id = {$this->id('scanner')}")->fetchColumn());
+        self::assertSame('no_answer', \App\Sql::value($this->c->db(), "SELECT state FROM agreements WHERE id = {$this->id('scanner')}"));
         self::assertSame(['Ты знаешь свой график смен на следующую неделю?'], $sent);
     }
 
@@ -163,7 +167,7 @@ final class SyncTest extends TestCase
         self::assertSame(1, $this->c->poller()->pollHires());
         self::assertSame(0, $this->c->poller()->pollHires());
         self::assertSame('90', $this->c->kv()->get('last_hire_task_id'));
-        self::assertSame(2, (int) $this->c->db()->query('SELECT COUNT(*) FROM newcomers')->fetchColumn());
+        self::assertSame(2, (int) \App\Sql::value($this->c->db(), 'SELECT COUNT(*) FROM newcomers'));
     }
 
     /**
@@ -173,7 +177,7 @@ final class SyncTest extends TestCase
      */
     public function test_unanswered_note_expires_after_an_hour(): void
     {
-        $code = $this->c->db()->query("SELECT invite_code FROM newcomers WHERE id = {$this->newcomerId}")->fetchColumn();
+        $code = \App\Sql::value($this->c->db(), "SELECT invite_code FROM newcomers WHERE id = {$this->newcomerId}");
         $this->bot->hearText("/start $code")->reply();
         $this->bot->hearCallbackQueryData("a:{$this->id('met')}:no")->reply(); // walks away from «Чего не хватает?»
 
@@ -193,6 +197,6 @@ final class SyncTest extends TestCase
         $this->c->db()->exec("INSERT INTO disputes(agreement_id, bitrix_task_id, created_at) VALUES({$this->id('scanner')}, 4242, '2026-11-20T10:00:00+03:00')");
         $this->tasks->status[4242] = 5;
         self::assertSame(1, $this->c->poller()->pollDisputes());
-        self::assertNotNull($this->c->db()->query("SELECT resolved_at FROM disputes WHERE bitrix_task_id = 4242")->fetchColumn());
+        self::assertNotNull(\App\Sql::value($this->c->db(), "SELECT resolved_at FROM disputes WHERE bitrix_task_id = 4242"));
     }
 }

@@ -86,7 +86,7 @@ final class Container
     /** SQLite connection; path from `DB_PATH`, default `var/app.sqlite`. */
     public function db(): \PDO
     {
-        return $this->once('db', fn () => Db::open($this->cfg->get('DB_PATH', self::ROOT . '/var/app.sqlite')));
+        return $this->once('db', fn () => Db::open($this->cfg->string('DB_PATH', self::ROOT . '/var/app.sqlite')));
     }
 
     /** Key/value flags store. */
@@ -194,12 +194,12 @@ final class Container
     /** Public URL of the HR panel, without trailing slash. */
     public function appUrl(): string
     {
-        return rtrim($this->cfg->get('APP_URL', 'https://novichok.indigit.info'), '/');
+        return rtrim($this->cfg->string('APP_URL', 'https://novichok.indigit.info'), '/');
     }
 
     /** Telegram bot username used in invite links. */
     public function botUsername(): string
     {
-        return $this->cfg->get('TELEGRAM_BOT_USERNAME', 'novichok_promises_bot');
+        return $this->cfg->string('TELEGRAM_BOT_USERNAME', 'novichok_promises_bot');
     }
 }

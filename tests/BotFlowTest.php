@@ -35,9 +35,9 @@ final class BotFlowTest extends TestCase
         $this->c->set('bot', $this->bot);
         Handlers::register($this->bot, $this->c);
         $this->as(self::CHAT);
-        $this->tasks = $this->c->tasks();
-        $this->newcomerId = $this->c->hire()->process(77, 'Приём: Петров Алексей', "Должность: Кладовщик-комплектовщик\nПодразделение: Склад\nДата выхода: 17.11.2026");
-        $this->code = (string) $this->c->db()->query("SELECT invite_code FROM newcomers WHERE id = {$this->newcomerId}")->fetchColumn();
+        $this->tasks = TestApp::tasks($this->c);
+        $this->newcomerId = TestApp::id($this->c->hire()->process(77, 'Приём: Петров Алексей', "Должность: Кладовщик-комплектовщик\nПодразделение: Склад\nДата выхода: 17.11.2026"));
+        $this->code = (string) \App\Sql::value($this->c->db(), "SELECT invite_code FROM newcomers WHERE id = {$this->newcomerId}");
         $this->tasks->calls = [];
     }
 
@@ -51,11 +51,11 @@ final class BotFlowTest extends TestCase
     /**
      * Outgoing API calls since the last heard update.
      *
-     * @return list<array{method:string, params:array}>
+     * @return list<array{method:string, params:array<mixed>}>
      */
     private function sent(): array
     {
-        return array_map(function (array $h): array {
+        return array_values(array_map(function (array $h): array {
             $req = $h['request'];
             $body = (string) $req->getBody();
             $params = json_decode($body, true);
@@ -64,7 +64,7 @@ final class BotFlowTest extends TestCase
             }
 
             return ['method' => basename($req->getUri()->getPath()), 'params' => $params];
-        }, $this->bot->getRequestHistory());
+        }, $this->bot->getRequestHistory()));
     }
 
     /** @return list<string> Texts of sent messages, in order. */
@@ -73,7 +73,11 @@ final class BotFlowTest extends TestCase
         return array_values(array_map(fn ($s) => $s['params']['text'], array_filter($this->sent(), fn ($s) => $s['method'] === 'sendMessage')));
     }
 
-    /** Inline button callback data of the last sent message. */
+    /**
+     * Inline button callback data of the last sent message.
+     *
+     * @return list<string>
+     */
     private function lastButtons(): array
     {
         $msgs = array_values(array_filter($this->sent(), fn ($s) => $s['method'] === 'sendMessage'));
@@ -86,7 +90,7 @@ final class BotFlowTest extends TestCase
     /** Agreement id by key for the test newcomer. */
     private function agreementId(string $key): int
     {
-        return (int) $this->c->db()->query("SELECT id FROM agreements WHERE newcomer_id = {$this->newcomerId} AND key = '$key'")->fetchColumn();
+        return (int) \App\Sql::value($this->c->db(), "SELECT id FROM agreements WHERE newcomer_id = {$this->newcomerId} AND key = '$key'");
     }
 
     private function start(): void
@@ -103,7 +107,7 @@ final class BotFlowTest extends TestCase
         self::assertStringStartsWith("С первым рабочим днём! Уточню пару вещей.\n\nТебя встретили и показали рабочее место?", $texts[1]);
         $met = $this->agreementId('met');
         self::assertSame(["a:$met:yes", "a:$met:partial", "a:$met:no"], $this->lastButtons());
-        self::assertSame(self::CHAT, (int) $this->c->db()->query("SELECT tg_chat_id FROM newcomers WHERE id = {$this->newcomerId}")->fetchColumn());
+        self::assertSame(self::CHAT, (int) \App\Sql::value($this->c->db(), "SELECT tg_chat_id FROM newcomers WHERE id = {$this->newcomerId}"));
     }
 
     /** «Да» completes the owner's task and the next question follows. */
@@ -160,7 +164,7 @@ final class BotFlowTest extends TestCase
         $this->as(777);
         $this->bot->hearText('/start ' . $this->code)->reply();
         self::assertSame([Texts::linkUsed()], $this->texts());
-        self::assertSame(self::CHAT, (int) $this->c->db()->query("SELECT tg_chat_id FROM newcomers WHERE id = {$this->newcomerId}")->fetchColumn());
+        self::assertSame(self::CHAT, (int) \App\Sql::value($this->c->db(), "SELECT tg_chat_id FROM newcomers WHERE id = {$this->newcomerId}"));
     }
 
     /** /start without a valid code explains where to get the link. */
@@ -192,7 +196,7 @@ final class BotFlowTest extends TestCase
     /** A newcomer who starts before the first day gets the logistics and no questions yet. */
     public function test_welcome_before_start_has_logistics(): void
     {
-        $this->c->clock()->set('2026-11-16T12:00:00+03:00');
+        TestApp::clock($this->c)->set('2026-11-16T12:00:00+03:00');
         $this->start();
         $texts = $this->texts();
         self::assertCount(1, $texts);
@@ -207,10 +211,10 @@ final class BotFlowTest extends TestCase
     {
         $this->start();
         $second = $this->c->hire()->process(78, 'Приём: Иванова Марина', "Должность: Продавец-консультант\nПодразделение: Магазин\nДата выхода: 17.11.2026");
-        $code2 = (string) $this->c->db()->query("SELECT invite_code FROM newcomers WHERE id = $second")->fetchColumn();
+        $code2 = (string) \App\Sql::value($this->c->db(), "SELECT invite_code FROM newcomers WHERE id = $second");
         $this->bot->hearText('/start ' . $code2)->reply();
         self::assertStringStartsWith('Привет, Марина!', $this->texts()[0]);
-        self::assertNull($this->c->db()->query("SELECT tg_chat_id FROM newcomers WHERE id = {$this->newcomerId}")->fetchColumn());
+        self::assertNull(\App\Sql::value($this->c->db(), "SELECT tg_chat_id FROM newcomers WHERE id = {$this->newcomerId}"));
     }
 
     /** No bot copy uses the banned word «обещ…». */

@@ -57,10 +57,10 @@ final class Poller
      */
     public function resumeIncompleteHires(): int
     {
-        $ids = $this->db->query(
+        $ids = \App\Sql::column($this->db, 
             "SELECT n.hire_task_id FROM newcomers n LEFT JOIN processed_hire_tasks p ON p.task_id = n.hire_task_id
              WHERE n.is_example = 0 AND n.hire_task_id IS NOT NULL AND p.task_id IS NULL"
-        )->fetchAll(\PDO::FETCH_COLUMN);
+        );
         foreach ($ids as $taskId) {
             $this->hire->process((int) $taskId, '', '');
         }
@@ -86,10 +86,10 @@ final class Poller
      */
     public function pollOwnerClosed(): int
     {
-        $rows = $this->db->query(
+        $rows = \App\Sql::all($this->db, 
             "SELECT g.id, g.state, g.bitrix_task_id FROM agreements g JOIN newcomers n ON n.id = g.newcomer_id
              WHERE n.is_example = 0 AND g.bitrix_task_id IS NOT NULL AND g.state IN ('scheduled','asked','not_received','no_answer')"
-        )->fetchAll();
+        );
         if ($rows === []) {
             return 0;
         }
@@ -130,7 +130,7 @@ final class Poller
      */
     public function pollDisputes(): int
     {
-        $rows = $this->db->query('SELECT id, bitrix_task_id FROM disputes WHERE resolved_at IS NULL AND bitrix_task_id IS NOT NULL')->fetchAll();
+        $rows = \App\Sql::all($this->db, 'SELECT id, bitrix_task_id FROM disputes WHERE resolved_at IS NULL AND bitrix_task_id IS NOT NULL');
         if ($rows === []) {
             return 0;
         }

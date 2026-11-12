@@ -38,7 +38,7 @@ final class BitrixClient
         'REST_UNAVAILABLE', 'ERROR_METHOD_NOT_ALLOWED_FOR_TARIFF', 'WRONG_AUTH_TYPE',
     ];
 
-    /** @var callable(string,array):array{status:int,body:string} */
+    /** @var callable(string, array<string,mixed>): array{status:int, body:string} */
     private $transport;
 
     /**

@@ -38,7 +38,7 @@ final class Dispatcher
     public function run(): void
     {
         $now = $this->clock->now();
-        $newcomers = $this->db->query('SELECT id, role_key, tg_chat_id FROM newcomers WHERE is_example = 0 AND tg_chat_id IS NOT NULL')->fetchAll();
+        $newcomers = \App\Sql::all($this->db, 'SELECT id, role_key, tg_chat_id FROM newcomers WHERE is_example = 0 AND tg_chat_id IS NOT NULL');
         foreach ($newcomers as $n) {
             // One newcomer's failure (e.g. they blocked the bot) must not stop the others.
             try {
@@ -68,7 +68,7 @@ final class Dispatcher
         $this->conversation->expireStaleNote($chat);
         $this->conversation->queueDue((int) $n['id']);
 
-        $open = $this->db->query("SELECT id, prompt_kind, prompt_sent_at, reminded_at FROM agreements WHERE newcomer_id = {$n['id']} AND prompt_sent_at IS NOT NULL")->fetch();
+        $open = \App\Sql::one($this->db, "SELECT id, prompt_kind, prompt_sent_at, reminded_at FROM agreements WHERE newcomer_id = {$n['id']} AND prompt_sent_at IS NOT NULL");
         if ($open) {
             $sentAt = new \DateTimeImmutable($open['prompt_sent_at']);
             if ($now >= $sentAt->modify(self::NO_ANSWER_AFTER)) {

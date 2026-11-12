@@ -48,7 +48,7 @@ final class BitrixTasks implements Tasks
             return [];
         }
         $out = [];
-        foreach (array_chunk(array_values($ids), 50) as $chunk) {
+        foreach (array_chunk($ids, 50) as $chunk) {
             $res = $this->client->call('tasks.task.list', ['filter' => ['ID' => $chunk], 'select' => ['ID', 'STATUS']]);
             foreach ($res['tasks'] ?? [] as $t) {
                 $out[(int) $t['id']] = (int) $t['status'];
@@ -67,11 +67,11 @@ final class BitrixTasks implements Tasks
             'order' => ['ID' => 'asc'],
         ]);
 
-        return array_map(fn (array $t) => [
+        return array_values(array_map(fn (array $t) => [
             'id' => (int) $t['id'],
             'title' => (string) $t['title'],
             'description' => (string) ($t['description'] ?? ''),
-        ], $res['tasks'] ?? []);
+        ], $res['tasks'] ?? []));
     }
 
     /** {@inheritDoc} */

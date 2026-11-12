@@ -24,24 +24,28 @@ final class AnswerServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->c = TestApp::make('2026-11-17T20:20:00+03:00');
-        $this->tasks = $this->c->tasks();
+        $this->tasks = TestApp::tasks($this->c);
         $this->answers = $this->c->answers();
-        $this->newcomerId = $this->c->hire()->process(77, 'Приём: Петров Алексей', "Должность: Кладовщик-комплектовщик\nПодразделение: Склад\nДата выхода: 17.11.2026");
+        $this->newcomerId = TestApp::id($this->c->hire()->process(77, 'Приём: Петров Алексей', "Должность: Кладовщик-комплектовщик\nПодразделение: Склад\nДата выхода: 17.11.2026"));
         $this->tasks->calls = [];
     }
 
-    /** Puts an agreement into a state and returns [agreement id, its Bitrix24 task id]. */
+    /**
+     * Puts an agreement into a state and returns [agreement id, its Bitrix24 task id].
+     *
+     * @return array{0: int, 1: int}
+     */
     private function agreement(string $key, string $state): array
     {
         $this->c->db()->prepare('UPDATE agreements SET state = ? WHERE newcomer_id = ? AND key = ?')->execute([$state, $this->newcomerId, $key]);
-        $row = $this->c->db()->query("SELECT id, bitrix_task_id FROM agreements WHERE newcomer_id = {$this->newcomerId} AND key = '$key'")->fetch();
+        $row = TestApp::row(\App\Sql::one($this->c->db(), "SELECT id, bitrix_task_id FROM agreements WHERE newcomer_id = {$this->newcomerId} AND key = '$key'"));
 
         return [(int) $row['id'], (int) $row['bitrix_task_id']];
     }
 
     private function state(int $agreementId): string
     {
-        return (string) $this->c->db()->query("SELECT state FROM agreements WHERE id = $agreementId")->fetchColumn();
+        return (string) \App\Sql::value($this->c->db(), "SELECT state FROM agreements WHERE id = $agreementId");
     }
 
     /** «Да» on an open task completes it and comments the confirmation, no note asked. */
@@ -63,7 +67,7 @@ final class AnswerServiceTest extends TestCase
         self::assertSame('not_received', $this->state($a));
         self::assertSame([], $this->tasks->calls, 'nothing sent before the note');
 
-        $this->answers->finalize($r['answerId'], '  обуви нет  ');
+        $this->answers->finalize(TestApp::noteAnswerId($r), '  обуви нет  ');
         self::assertSame([[$task, 'Получение подтверждено частично: «обуви нет»']], $this->tasks->callsOf('comment'));
         self::assertSame([], $this->tasks->callsOf('complete'));
     }
@@ -73,7 +77,7 @@ final class AnswerServiceTest extends TestCase
     {
         [$a, $task] = $this->agreement('workwear', 'asked');
         $r = $this->answers->record($a, Answer::No);
-        $this->answers->finalize($r['answerId'], null);
+        $this->answers->finalize(TestApp::noteAnswerId($r), null);
         self::assertSame([[$task, 'Новичок пока не получил.']], $this->tasks->callsOf('comment'));
     }
 
@@ -82,7 +86,7 @@ final class AnswerServiceTest extends TestCase
     {
         [$a, $task] = $this->agreement('scanner', 'owner_closed');
         $r = $this->answers->record($a, Answer::No);
-        $this->answers->finalize($r['answerId'], 'логин не работает');
+        $this->answers->finalize(TestApp::noteAnswerId($r), 'логин не работает');
 
         self::assertSame('disputed', $this->state($a));
         $creates = $this->tasks->callsOf('create');
@@ -93,7 +97,7 @@ final class AnswerServiceTest extends TestCase
         self::assertStringContainsString("https://portal.test/task/$task/", $f['DESCRIPTION']);
         self::assertStringContainsString('новичок ответил «Нет»: «логин не работает»', $f['DESCRIPTION']);
         self::assertSame([], $this->tasks->callsOf('complete'));
-        $dispute = $this->c->db()->query("SELECT bitrix_task_id, resolved_at FROM disputes WHERE agreement_id = $a")->fetch();
+        $dispute = TestApp::row(\App\Sql::one($this->c->db(), "SELECT bitrix_task_id, resolved_at FROM disputes WHERE agreement_id = $a"));
         self::assertSame(array_key_last($this->tasks->created), (int) $dispute['bitrix_task_id']);
         self::assertNull($dispute['resolved_at']);
     }
@@ -104,7 +108,7 @@ final class AnswerServiceTest extends TestCase
         [$a] = $this->agreement('met', 'confirmed');
         self::assertSame(['status' => 'ignored'], $this->answers->record($a, Answer::No));
         self::assertSame([], $this->tasks->calls);
-        self::assertSame(0, (int) $this->c->db()->query('SELECT COUNT(*) FROM answers')->fetchColumn());
+        self::assertSame(0, (int) \App\Sql::value($this->c->db(), 'SELECT COUNT(*) FROM answers'));
     }
 
     /** If Bitrix24 is down, the answer is kept and the effects are applied later by retryPending(). */
@@ -127,9 +131,9 @@ final class AnswerServiceTest extends TestCase
         [$a] = $this->agreement('workwear', 'asked');
         $r = $this->answers->record($a, Answer::Partial);
         $note = '<b>&[url]' . str_repeat('я', 2000);
-        $this->answers->finalize($r['answerId'], $note);
+        $this->answers->finalize(TestApp::noteAnswerId($r), $note);
 
-        $stored = (string) $this->c->db()->query('SELECT note FROM answers WHERE id = ' . $r['answerId'])->fetchColumn();
+        $stored = (string) \App\Sql::value($this->c->db(), 'SELECT note FROM answers WHERE id = ' . TestApp::noteAnswerId($r));
         self::assertSame(500, mb_strlen($stored));
         self::assertStringStartsWith('<b>&[url]', $stored);
         // BBCode is neutralized so a note cannot mention people or format the comment
@@ -141,10 +145,10 @@ final class AnswerServiceTest extends TestCase
     {
         [$a] = $this->agreement('workwear', 'asked');
         $r = $this->answers->record($a, Answer::Partial);
-        $this->answers->finalize($r['answerId'], null);
+        $this->answers->finalize(TestApp::noteAnswerId($r), null);
         $this->c->db()->exec("UPDATE agreements SET state = 'owner_closed' WHERE id = $a");
         $this->answers->record($a, Answer::Yes);
-        self::assertSame('partial', $this->c->db()->query("SELECT first_answer FROM agreements WHERE id = $a")->fetchColumn());
+        self::assertSame('partial', \App\Sql::value($this->c->db(), "SELECT first_answer FROM agreements WHERE id = $a"));
         self::assertSame('confirmed', $this->state($a));
     }
 }

@@ -35,4 +35,62 @@ final class TestApp
 
         return $c;
     }
+
+    /**
+     * The fake Bitrix24 gateway of a test container (typed access for assertions).
+     */
+    public static function tasks(Container $c): FakeTasks
+    {
+        $t = $c->tasks();
+        \PHPUnit\Framework\Assert::assertInstanceOf(FakeTasks::class, $t);
+
+        return $t;
+    }
+
+    /**
+     * Asserts that a newcomer id (or any id) was returned and gives it as int.
+     */
+    public static function id(?int $id): int
+    {
+        \PHPUnit\Framework\Assert::assertNotNull($id);
+
+        return $id;
+    }
+
+    /**
+     * Asserts that a query found a row and returns it.
+     *
+     * @param array<string,mixed>|null $row
+     * @return array<string,mixed>
+     */
+    public static function row(?array $row): array
+    {
+        \PHPUnit\Framework\Assert::assertNotNull($row);
+
+        return $row;
+    }
+
+    /**
+     * Answer id from an `AnswerService::record()` result that must be waiting for a note.
+     *
+     * @param array{status: string, answerId?: int} $result
+     */
+    public static function noteAnswerId(array $result): int
+    {
+        \PHPUnit\Framework\Assert::assertSame('needs_note', $result['status']);
+        \PHPUnit\Framework\Assert::assertArrayHasKey('answerId', $result);
+
+        return $result['answerId'];
+    }
+
+    /**
+     * The frozen clock of a test container, to move time in tests.
+     */
+    public static function clock(Container $c): FrozenClock
+    {
+        $clock = $c->clock();
+        \PHPUnit\Framework\Assert::assertInstanceOf(FrozenClock::class, $clock);
+
+        return $clock;
+    }
 }

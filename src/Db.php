@@ -80,7 +80,7 @@ final class Db
             );
             SQL);
         // Added after the final review: per-effect progress and permanent errors of answers.
-        $cols = array_column($db->query('PRAGMA table_info(answers)')->fetchAll(\PDO::FETCH_ASSOC), 'name');
+        $cols = array_column(\App\Sql::all($db, 'PRAGMA table_info(answers)'), 'name');
         if (!in_array('effects_done', $cols, true)) {
             $db->exec('ALTER TABLE answers ADD COLUMN effects_done INTEGER NOT NULL DEFAULT 0');
         }

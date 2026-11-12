@@ -160,7 +160,7 @@ final class Conversation
         if ($answerId === null) {
             return false;
         }
-        $created = $this->db->query("SELECT created_at FROM answers WHERE id = $answerId")->fetchColumn();
+        $created = \App\Sql::value($this->db, "SELECT created_at FROM answers WHERE id = $answerId");
         if ($created !== false && new \DateTimeImmutable((string) $created) > $this->clock->now()->modify('-' . self::NOTE_WAIT)) {
             return false;
         }
@@ -186,16 +186,16 @@ final class Conversation
      */
     public function queueDue(int $newcomerId): int
     {
-        $n = $this->db->query("SELECT role_key FROM newcomers WHERE id = $newcomerId")->fetch();
+        $n = \App\Sql::one($this->db, "SELECT role_key FROM newcomers WHERE id = $newcomerId");
         if (!$n) {
             return 0;
         }
         $role = $this->roles->get($n['role_key']);
         $now = $this->clock->now();
-        $rows = $this->db->query(
+        $rows = \App\Sql::all($this->db, 
             "SELECT id, day, due_date, state FROM agreements WHERE newcomer_id = $newcomerId AND prompt_queued_at IS NULL
              AND (state = 'scheduled' OR (state = 'owner_closed' AND prompt_kind IS NULL)) ORDER BY day, id"
-        )->fetchAll();
+        );
 
         $queued = 0;
         $introDays = [];
@@ -223,21 +223,21 @@ final class Conversation
      */
     public function pump(int $chatId, bool $ignoreWindow = false): bool
     {
-        $n = $this->db->query("SELECT id, role_key FROM newcomers WHERE tg_chat_id = $chatId")->fetch();
+        $n = \App\Sql::one($this->db, "SELECT id, role_key FROM newcomers WHERE tg_chat_id = $chatId");
         if (!$n || $this->awaitingNote($chatId) !== null) {
             return false;
         }
-        $open = $this->db->query("SELECT COUNT(*) FROM agreements WHERE newcomer_id = {$n['id']} AND prompt_sent_at IS NOT NULL")->fetchColumn();
+        $open = \App\Sql::value($this->db, "SELECT COUNT(*) FROM agreements WHERE newcomer_id = {$n['id']} AND prompt_sent_at IS NOT NULL");
         if ((int) $open > 0) {
             return false;
         }
         if (!$ignoreWindow && !$this->schedule->windowOpen($this->roles->get($n['role_key']), $this->clock->now())) {
             return false;
         }
-        $next = $this->db->query(
+        $next = \App\Sql::one($this->db, 
             "SELECT * FROM agreements WHERE newcomer_id = {$n['id']} AND prompt_queued_at IS NOT NULL AND prompt_sent_at IS NULL
              ORDER BY prompt_kind = 'recheck', day, id LIMIT 1"
-        )->fetch();
+        );
         if (!$next) {
             return false;
         }
@@ -251,9 +251,9 @@ final class Conversation
      */
     public function resend(int $agreementId): void
     {
-        $row = $this->db->query(
+        $row = \App\Sql::one($this->db, 
             "SELECT g.*, n.role_key, n.tg_chat_id FROM agreements g JOIN newcomers n ON n.id = g.newcomer_id WHERE g.id = $agreementId"
-        )->fetch();
+        );
         if (!$row || $row['tg_chat_id'] === null || $row['prompt_sent_at'] === null) {
             return;
         }
@@ -331,7 +331,7 @@ final class Conversation
     /** Answer id whose note the bot is waiting for in this chat, if any. */
     private function awaitingNote(int $chatId): ?int
     {
-        $v = $this->db->query("SELECT awaiting_note_answer_id FROM chat_state WHERE chat_id = $chatId")->fetchColumn();
+        $v = \App\Sql::value($this->db, "SELECT awaiting_note_answer_id FROM chat_state WHERE chat_id = $chatId");
 
         return $v === false || $v === null ? null : (int) $v;
     }

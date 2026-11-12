@@ -54,12 +54,12 @@ final class DemoService
     public function nextBatch(int $newcomerId): void
     {
         $db = $this->c->db();
-        $day = $db->query("SELECT MIN(day) FROM agreements WHERE newcomer_id = $newcomerId AND state = 'scheduled'")->fetchColumn();
+        $day = \App\Sql::value($db, "SELECT MIN(day) FROM agreements WHERE newcomer_id = $newcomerId AND state = 'scheduled'");
         if ($day === null || $day === false) {
             return;
         }
         $now = $this->c->clock()->now()->format(DATE_ATOM);
-        $ids = $db->query("SELECT id FROM agreements WHERE newcomer_id = $newcomerId AND state = 'scheduled' AND day = $day ORDER BY id")->fetchAll(\PDO::FETCH_COLUMN);
+        $ids = \App\Sql::column($db, "SELECT id FROM agreements WHERE newcomer_id = $newcomerId AND state = 'scheduled' AND day = $day ORDER BY id");
         $upd = $db->prepare("UPDATE agreements SET state = 'asked', prompt_kind = 'initial', prompt_intro = ?, prompt_queued_at = ?, updated_at = ? WHERE id = ?");
         foreach ($ids as $i => $id) {
             $upd->execute([$i === 0 ? 1 : 0, $now, $now, $id]);
@@ -76,7 +76,7 @@ final class DemoService
     public function closeAsOwner(int $agreementId): void
     {
         $db = $this->c->db();
-        $ag = $db->query("SELECT newcomer_id, state, bitrix_task_id, due_date FROM agreements WHERE id = $agreementId")->fetch();
+        $ag = \App\Sql::one($db, "SELECT newcomer_id, state, bitrix_task_id, due_date FROM agreements WHERE id = $agreementId");
         if (!$ag || $ag['bitrix_task_id'] === null) {
             return;
         }
@@ -93,7 +93,7 @@ final class DemoService
     /** Sends the next queued question to the newcomer's chat, ignoring quiet hours. */
     private function pump(int $newcomerId): void
     {
-        $chat = $this->c->db()->query("SELECT tg_chat_id FROM newcomers WHERE id = $newcomerId")->fetchColumn();
+        $chat = \App\Sql::value($this->c->db(), "SELECT tg_chat_id FROM newcomers WHERE id = $newcomerId");
         if ($chat !== null && $chat !== false) {
             $this->c->conversation()->pump((int) $chat, ignoreWindow: true);
         }

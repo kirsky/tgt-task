@@ -45,14 +45,14 @@ final class AnswerService
     /**
      * Records an answer to an agreement and clears its pending prompt.
      *
-     * @return array{status: 'ignored'|'done'|'needs_note', answerId?: int}
+     * @return array{status: 'ignored'|'done'}|array{status: 'needs_note', answerId: int}
      *         `ignored` — the answer changes nothing (stale/double tap; nothing stored);
      *         `done` — «Да», effects applied (or queued if Bitrix24 is down);
      *         `needs_note` — ask «Чего не хватает?», then call {@see finalize()} with `answerId`.
      */
     public function record(int $agreementId, Answer $answer): array
     {
-        $ag = $this->db->query("SELECT state, first_answer FROM agreements WHERE id = $agreementId")->fetch();
+        $ag = \App\Sql::one($this->db, "SELECT state, first_answer FROM agreements WHERE id = $agreementId");
         if (!$ag) {
             return ['status' => 'ignored'];
         }
@@ -110,7 +110,7 @@ final class AnswerService
      */
     public function retryPending(): int
     {
-        $ids = $this->db->query('SELECT id FROM answers WHERE finalized_at IS NOT NULL AND effects_applied_at IS NULL ORDER BY id')->fetchAll(\PDO::FETCH_COLUMN);
+        $ids = \App\Sql::column($this->db, 'SELECT id FROM answers WHERE finalized_at IS NOT NULL AND effects_applied_at IS NULL ORDER BY id');
         $applied = 0;
         foreach ($ids as $id) {
             if (!$this->applyEffects((int) $id)) {
@@ -149,11 +149,11 @@ final class AnswerService
      */
     private function applyEffects(int $answerId): bool
     {
-        $row = $this->db->query(
+        $row = \App\Sql::one($this->db, 
             "SELECT a.*, g.bitrix_task_id, g.key, g.id AS agreement_id, n.full_name, n.role_key, n.id AS newcomer_id
              FROM answers a JOIN agreements g ON g.id = a.agreement_id JOIN newcomers n ON n.id = g.newcomer_id
              WHERE a.id = $answerId"
-        )->fetch();
+        );
         if (!$row || $row['effects_applied_at'] !== null) {
             return true;
         }

@@ -25,12 +25,12 @@ final class ExamplesTest extends TestCase
             Examples::reset($c->db(), $c->roles(), $c->schedule(), $c->clock());
             Examples::reset($c->db(), $c->roles(), $c->schedule(), $c->clock());
 
-            $rows = $c->db()->query('SELECT full_name, start_date FROM newcomers WHERE is_example = 1 ORDER BY id')->fetchAll();
+            $rows = \App\Sql::all($c->db(), 'SELECT full_name, start_date FROM newcomers WHERE is_example = 1 ORDER BY id');
             self::assertCount(5, $rows);
             $days = array_map(fn ($r) => $c->schedule()->dayNumber($r['start_date'], $c->clock()->now()), $rows);
             self::assertSame([2, 34, 12, 5, 68], $days);
-            self::assertSame(1, (int) $c->db()->query("SELECT COUNT(*) FROM newcomers WHERE invite_code = 'real'")->fetchColumn(), 'real newcomer untouched');
-            self::assertSame(0, (int) $c->db()->query('SELECT COUNT(*) FROM agreements g JOIN newcomers n ON n.id = g.newcomer_id WHERE n.is_example = 1 AND g.bitrix_task_id IS NOT NULL')->fetchColumn());
+            self::assertSame(1, (int) \App\Sql::value($c->db(), "SELECT COUNT(*) FROM newcomers WHERE invite_code = 'real'"), 'real newcomer untouched');
+            self::assertSame(0, (int) \App\Sql::value($c->db(), 'SELECT COUNT(*) FROM agreements g JOIN newcomers n ON n.id = g.newcomer_id WHERE n.is_example = 1 AND g.bitrix_task_id IS NOT NULL'));
 
             $k = Kpi::compute($c->db(), $c->schedule(), $c->roles(), $c->clock());
             self::assertGreaterThanOrEqual(1, $k['overdue']);
@@ -45,7 +45,7 @@ final class ExamplesTest extends TestCase
     {
         $c = TestApp::make('2026-11-12T10:00:00+03:00');
         Examples::reset($c->db(), $c->roles(), $c->schedule(), $c->clock());
-        $q = fn (string $sql) => $c->db()->query($sql)->fetch();
+        $q = fn (string $sql) => \App\Sql::one($c->db(), $sql);
         $ww = $q("SELECT g.state, g.first_answer FROM agreements g JOIN newcomers n ON n.id = g.newcomer_id WHERE n.full_name = 'Петров Алексей' AND g.key = 'workwear'");
         self::assertSame(['state' => 'confirmed', 'first_answer' => 'partial'], $ww);
         $sc = $q("SELECT g.state, a.note FROM agreements g JOIN newcomers n ON n.id = g.newcomer_id JOIN answers a ON a.agreement_id = g.id AND a.kind = 'recheck' WHERE n.full_name = 'Ковальчук Дмитрий' AND g.key = 'scanner'");

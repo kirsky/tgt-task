@@ -63,6 +63,6 @@ final class HireTaskParser
             return null;
         }
 
-        return $m[1] === '' ? null : $m[1];
+        return $m[1];
     }
 }

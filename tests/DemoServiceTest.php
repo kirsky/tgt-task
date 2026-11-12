@@ -31,7 +31,7 @@ final class DemoServiceTest extends TestCase
         $this->bot->setCommonChat(Chat::make(555, 'private'));
         $this->c->set('bot', $this->bot);
         Handlers::register($this->bot, $this->c);
-        $this->tasks = $this->c->tasks();
+        $this->tasks = TestApp::tasks($this->c);
     }
 
     /** @return list<string> Texts of messages sent since the given history position. */
@@ -57,14 +57,14 @@ final class DemoServiceTest extends TestCase
         self::assertSame(19, $hire['RESPONSIBLE_ID']);
         self::assertCount(9, $this->tasks->callsOf('create'), 'hire task + 8 agreement tasks');
         self::assertSame((string) array_key_first($this->tasks->created), $this->c->kv()->get('last_hire_task_id'));
-        self::assertSame('Петров Алексей', $this->c->db()->query("SELECT full_name FROM newcomers WHERE id = $id")->fetchColumn());
+        self::assertSame('Петров Алексей', \App\Sql::value($this->c->db(), "SELECT full_name FROM newcomers WHERE id = $id"));
     }
 
     /** «Следующий опрос сейчас» sends the next day's questions immediately, even at night. */
     public function test_next_batch_sends_day3_ignoring_window(): void
     {
         $id = $this->c->demo()->hire('Петров Алексей', 'warehouse_picker', '2026-11-17');
-        $code = $this->c->db()->query("SELECT invite_code FROM newcomers WHERE id = $id")->fetchColumn();
+        $code = \App\Sql::value($this->c->db(), "SELECT invite_code FROM newcomers WHERE id = $id");
         $this->bot->hearText("/start $code")->reply();
         $this->c->db()->exec("UPDATE agreements SET state = 'confirmed', prompt_queued_at = NULL, prompt_sent_at = NULL WHERE newcomer_id = $id AND day = 1");
 
@@ -77,20 +77,20 @@ final class DemoServiceTest extends TestCase
     public function test_close_as_owner_triggers_recheck(): void
     {
         $id = $this->c->demo()->hire('Петров Алексей', 'warehouse_picker', '2026-11-17');
-        $code = $this->c->db()->query("SELECT invite_code FROM newcomers WHERE id = $id")->fetchColumn();
+        $code = \App\Sql::value($this->c->db(), "SELECT invite_code FROM newcomers WHERE id = $id");
         $this->bot->hearText("/start $code")->reply();
-        $met = (int) $this->c->db()->query("SELECT id FROM agreements WHERE newcomer_id = $id AND key = 'met'")->fetchColumn();
+        $met = (int) \App\Sql::value($this->c->db(), "SELECT id FROM agreements WHERE newcomer_id = $id AND key = 'met'");
         $this->bot->hearCallbackQueryData("a:$met:no")->reply();
         $this->bot->hearText('никто не встретил')->reply();
         // answer the rest of day 1 so nothing else is open
         foreach (['workwear', 'mentor'] as $k) {
-            $a = (int) $this->c->db()->query("SELECT id FROM agreements WHERE newcomer_id = $id AND key = '$k'")->fetchColumn();
+            $a = (int) \App\Sql::value($this->c->db(), "SELECT id FROM agreements WHERE newcomer_id = $id AND key = '$k'");
             $this->bot->hearCallbackQueryData("a:$a:yes")->reply();
         }
 
         $pos = count($this->bot->getRequestHistory());
         $this->c->demo()->closeAsOwner($met);
-        $task = (int) $this->c->db()->query("SELECT bitrix_task_id FROM agreements WHERE id = $met")->fetchColumn();
+        $task = (int) \App\Sql::value($this->c->db(), "SELECT bitrix_task_id FROM agreements WHERE id = $met");
         self::assertContains([$task], $this->tasks->callsOf('complete'));
         self::assertSame(['Отмечено, что тебя встретили и показали рабочее место. Всё так?'], $this->textsSince($pos));
     }

@@ -38,22 +38,22 @@ final class ReviewFixesTest extends TestCase
         $this->bot->setCommonChat(Chat::make(555, 'private'));
         $this->c->set('bot', $this->bot);
         Handlers::register($this->bot, $this->c);
-        $this->tasks = $this->c->tasks();
+        $this->tasks = TestApp::tasks($this->c);
     }
 
     private function hire(int $taskId = 77): int
     {
-        return $this->c->hire()->process($taskId, 'Приём: Петров Алексей', "Должность: Кладовщик-комплектовщик\nПодразделение: Склад\nДата выхода: 17.11.2026");
+        return TestApp::id($this->c->hire()->process($taskId, 'Приём: Петров Алексей', "Должность: Кладовщик-комплектовщик\nПодразделение: Склад\nДата выхода: 17.11.2026"));
     }
 
     private function aid(int $nid, string $key): int
     {
-        return (int) $this->c->db()->query("SELECT id FROM agreements WHERE newcomer_id = $nid AND key = '$key'")->fetchColumn();
+        return (int) \App\Sql::value($this->c->db(), "SELECT id FROM agreements WHERE newcomer_id = $nid AND key = '$key'");
     }
 
     private function connect(int $nid): void
     {
-        $code = $this->c->db()->query("SELECT invite_code FROM newcomers WHERE id = $nid")->fetchColumn();
+        $code = \App\Sql::value($this->c->db(), "SELECT invite_code FROM newcomers WHERE id = $nid");
         $this->bot->hearText("/start $code")->reply();
     }
 
@@ -67,8 +67,8 @@ final class ReviewFixesTest extends TestCase
         } catch (BitrixUnavailable) {
         }
         self::assertSame(1, $this->c->poller()->resumeIncompleteHires());
-        $nid = (int) $this->c->db()->query('SELECT id FROM newcomers')->fetchColumn();
-        self::assertSame(0, (int) $this->c->db()->query("SELECT COUNT(*) FROM agreements WHERE newcomer_id = $nid AND bitrix_task_id IS NULL")->fetchColumn());
+        $nid = (int) \App\Sql::value($this->c->db(), 'SELECT id FROM newcomers');
+        self::assertSame(0, (int) \App\Sql::value($this->c->db(), "SELECT COUNT(*) FROM agreements WHERE newcomer_id = $nid AND bitrix_task_id IS NULL"));
         self::assertCount(1, $this->tasks->callsOf('comment'), 'invite comment posted once');
         self::assertSame(0, $this->c->poller()->resumeIncompleteHires());
     }
@@ -114,6 +114,7 @@ final class ReviewFixesTest extends TestCase
         $nid = $this->hire();
         $this->c->db()->exec("UPDATE agreements SET state = 'asked' WHERE newcomer_id = $nid");
         $failing = new class extends FakeTasks {
+            /** @var list<int> Task ids whose completion fails permanently. */
             public array $broken = [];
 
             public function complete(int $id): void
@@ -128,13 +129,13 @@ final class ReviewFixesTest extends TestCase
         $this->c->set('answers', null);
         $answers = $this->c->answers();
         $met = $this->aid($nid, 'met');
-        $failing->broken[] = (int) $this->c->db()->query("SELECT bitrix_task_id FROM agreements WHERE id = $met")->fetchColumn();
+        $failing->broken[] = (int) \App\Sql::value($this->c->db(), "SELECT bitrix_task_id FROM agreements WHERE id = $met");
 
         $answers->record($met, Answer::Yes); // permanent error → recorded, no exception
         $answers->record($this->aid($nid, 'workwear'), Answer::Yes);
         self::assertCount(1, $failing->callsOf('complete'), 'second answer applied despite the first failing');
         self::assertSame(0, $answers->retryPending(), 'failed one is not retried forever');
-        self::assertNotNull($this->c->db()->query("SELECT effects_error FROM answers WHERE agreement_id = $met")->fetchColumn());
+        self::assertNotNull(\App\Sql::value($this->c->db(), "SELECT effects_error FROM answers WHERE agreement_id = $met"));
     }
 
     /** #7: when an effect list partly succeeded, a retry continues where it stopped (no duplicate complete). */
@@ -169,7 +170,7 @@ final class ReviewFixesTest extends TestCase
         $this->bot->hearCallbackQueryData("a:$ww:no")->reply(); // «Чего не хватает?»
         $this->connect($nid); // reopens the link instead of answering
 
-        self::assertSame(1, (int) $this->c->db()->query("SELECT COUNT(*) FROM disputes WHERE agreement_id = $ww")->fetchColumn());
+        self::assertSame(1, (int) \App\Sql::value($this->c->db(), "SELECT COUNT(*) FROM disputes WHERE agreement_id = $ww"));
         self::assertCount(1, array_filter($this->tasks->callsOf('create'), fn ($c) => str_starts_with($c[0]['TITLE'], 'Закрыто, но не получено')));
     }
 
@@ -179,10 +180,10 @@ final class ReviewFixesTest extends TestCase
         $nid = $this->hire();
         $met = $this->aid($nid, 'met');
         $this->c->db()->exec("UPDATE agreements SET state = 'asked' WHERE id = $met");
-        $r = $this->c->answers()->record($met, Answer::No);
-        $this->c->db()->exec("UPDATE answers SET created_at = '2026-11-17T10:00:00+03:00' WHERE id = {$r['answerId']}");
+        $answerId = TestApp::noteAnswerId($this->c->answers()->record($met, Answer::No));
+        $this->c->db()->exec("UPDATE answers SET created_at = '2026-11-17T10:00:00+03:00' WHERE id = $answerId");
         $this->c->dispatcher()->run();
-        self::assertNotNull($this->c->db()->query("SELECT finalized_at FROM answers WHERE id = {$r['answerId']}")->fetchColumn());
+        self::assertNotNull(\App\Sql::value($this->c->db(), "SELECT finalized_at FROM answers WHERE id = $answerId"));
     }
 
     /** #2: a chat that blocked the bot is unbound and does not stop the tick for others. */
@@ -192,13 +193,13 @@ final class ReviewFixesTest extends TestCase
         $b = $this->c->hire()->process(78, 'Приём: Иванова Марина', "Должность: Продавец-консультант\nПодразделение: Магазин\nДата выхода: 17.11.2026");
         $this->c->db()->exec("UPDATE newcomers SET tg_chat_id = 111 WHERE id = $a");
         $this->c->db()->exec("UPDATE newcomers SET tg_chat_id = 222 WHERE id = $b");
-        $this->c->clock()->set('2026-11-17T21:20:00+03:00');
+        TestApp::clock($this->c)->set('2026-11-17T21:20:00+03:00');
         // exactly what Telegram answers when the user blocked the bot
         (fn () => $this->mockHandler->append(new \GuzzleHttp\Psr7\Response(403, [], '{"ok":false,"error_code":403,"description":"Forbidden: bot was blocked by the user"}')))->call($this->bot);
 
         $this->c->dispatcher()->run(); // must not throw
-        self::assertNull($this->c->db()->query("SELECT tg_chat_id FROM newcomers WHERE id = $a")->fetchColumn());
-        self::assertNotNull($this->c->db()->query("SELECT prompt_sent_at FROM agreements WHERE newcomer_id = $b AND prompt_sent_at IS NOT NULL")->fetchColumn(), 'second newcomer still got a question');
+        self::assertNull(\App\Sql::value($this->c->db(), "SELECT tg_chat_id FROM newcomers WHERE id = $a"));
+        self::assertNotNull(\App\Sql::value($this->c->db(), "SELECT prompt_sent_at FROM agreements WHERE newcomer_id = $b AND prompt_sent_at IS NOT NULL"), 'second newcomer still got a question');
     }
 
     /** #6: an owner-closed mark does not overwrite an agreement confirmed in the meantime. */
@@ -208,7 +209,7 @@ final class ReviewFixesTest extends TestCase
         $met = $this->aid($nid, 'met');
         $this->c->db()->exec("UPDATE agreements SET state = 'confirmed' WHERE id = $met");
         $this->c->poller()->markOwnerClosed($met, State::Asked); // stale state read before the network call
-        self::assertSame('confirmed', $this->c->db()->query("SELECT state FROM agreements WHERE id = $met")->fetchColumn());
+        self::assertSame('confirmed', \App\Sql::value($this->c->db(), "SELECT state FROM agreements WHERE id = $met"));
     }
 
     /** #8: examples refresh on the first panel visit of a day, so «день 2» stays day 2 without a cron. */
@@ -219,10 +220,10 @@ final class ReviewFixesTest extends TestCase
         $router->dispatch('GET', '/login', [], $s);
         $router->dispatch('POST', '/login', ['password' => 'secret', 'csrf' => $s['csrf']], $s);
         $router->dispatch('GET', '/', [], $s);
-        self::assertSame(5, (int) $this->c->db()->query('SELECT COUNT(*) FROM newcomers WHERE is_example = 1')->fetchColumn());
-        $this->c->clock()->set('2026-12-01T10:00:00+03:00');
+        self::assertSame(5, (int) \App\Sql::value($this->c->db(), 'SELECT COUNT(*) FROM newcomers WHERE is_example = 1'));
+        TestApp::clock($this->c)->set('2026-12-01T10:00:00+03:00');
         $router->dispatch('GET', '/', [], $s);
-        $start = $this->c->db()->query("SELECT start_date FROM newcomers WHERE is_example = 1 AND full_name = 'Петров Алексей'")->fetchColumn();
+        $start = \App\Sql::value($this->c->db(), "SELECT start_date FROM newcomers WHERE is_example = 1 AND full_name = 'Петров Алексей'");
         self::assertSame('2026-11-30', $start);
     }
 }

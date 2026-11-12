@@ -26,7 +26,7 @@ final class HireServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->c = TestApp::make('2026-11-16T12:00:00+03:00');
-        $this->tasks = $this->c->tasks();
+        $this->tasks = TestApp::tasks($this->c);
         $this->hire = $this->c->hire();
     }
 
@@ -49,7 +49,7 @@ final class HireServiceTest extends TestCase
         self::assertStringContainsString('Закроется автоматически, когда новичок подтвердит получение.', $first['DESCRIPTION']);
         self::assertSame(21, $creates[6][0]['RESPONSIBLE_ID'], 'day-30 pay check goes to accounting');
 
-        $rows = $this->c->db()->query("SELECT key, day, due_date, state, bitrix_task_id FROM agreements WHERE newcomer_id = $id ORDER BY id")->fetchAll();
+        $rows = \App\Sql::all($this->c->db(), "SELECT key, day, due_date, state, bitrix_task_id FROM agreements WHERE newcomer_id = $id ORDER BY id");
         self::assertCount(8, $rows);
         self::assertSame(['scheduled'], array_values(array_unique(array_column($rows, 'state'))));
         self::assertSame('2026-11-19', $rows[3]['due_date']);
@@ -83,7 +83,7 @@ final class HireServiceTest extends TestCase
         $id = $this->hire->process(77, self::TITLE, self::DESC);
 
         self::assertCount(8, $this->tasks->callsOf('create'));
-        $ids = $this->c->db()->query("SELECT bitrix_task_id FROM agreements WHERE newcomer_id = $id")->fetchAll(\PDO::FETCH_COLUMN);
+        $ids = \App\Sql::column($this->c->db(), "SELECT bitrix_task_id FROM agreements WHERE newcomer_id = $id");
         self::assertCount(8, array_unique(array_filter($ids)));
         self::assertCount(1, $this->tasks->callsOf('comment'));
     }

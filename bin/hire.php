@@ -21,5 +21,5 @@ if (!$name || !$role || !$start) {
 }
 $c = Container::boot();
 $id = $c->demo()->hire($name, $role, $start);
-$code = $c->db()->query("SELECT invite_code FROM newcomers WHERE id = $id")->fetchColumn();
+$code = \App\Sql::value($c->db(), "SELECT invite_code FROM newcomers WHERE id = $id");
 echo "newcomer: $id\nlink: {$c->hire()->inviteLink((string) $code)}\ncard: {$c->appUrl()}/n/$id\n";

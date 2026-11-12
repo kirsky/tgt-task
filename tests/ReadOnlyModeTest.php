@@ -39,7 +39,7 @@ final class ReadOnlyModeTest extends TestCase
         $r = $router->dispatch('POST', '/demo/hire', ['full_name' => 'X Y', 'role' => 'warehouse_picker', 'start_date' => '2026-11-27', 'csrf' => $session['csrf']], $session);
         self::assertSame(503, $r->status);
         self::assertStringContainsString('Действия с задачами временно недоступны', $r->body);
-        self::assertSame([], $c->tasks()->calls);
+        self::assertSame([], TestApp::tasks($c)->calls);
 
         Handlers::register($bot, $c);
         $bot->setCommonUser(User::make(5, false, 'Т'));

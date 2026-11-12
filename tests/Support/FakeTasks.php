@@ -13,7 +13,7 @@ use App\Bitrix\Tasks;
  */
 class FakeTasks implements Tasks
 {
-    /** @var list<array{0:string,1:array}> Every call as [method, args]. */
+    /** @var list<array{0:string,1:array<mixed>}> Every call as [method, args]. */
     public array $calls = [];
     /** @var array<int,array<string,mixed>> Created tasks by id. */
     public array $created = [];
@@ -34,7 +34,11 @@ class FakeTasks implements Tasks
         $this->failOn = $this->callNo + $n;
     }
 
-    /** Records a call and throws if this is the configured failing call. */
+    /**
+     * Records a call and throws if this is the configured failing call.
+     *
+     * @param array<mixed> $args
+     */
     private function hit(string $method, array $args): void
     {
         $this->callNo++;
@@ -48,7 +52,7 @@ class FakeTasks implements Tasks
     /**
      * Calls of one method only.
      *
-     * @return list<array>
+     * @return list<array<mixed>>
      */
     public function callsOf(string $method): array
     {

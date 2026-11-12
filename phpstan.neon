@@ -1,0 +1,11 @@
+# Static analysis: `composer stan` (vendor/bin/phpstan analyse).
+parameters:
+    level: 8
+    paths:
+        - src
+        - bin
+        - webhook
+        - public
+        - config
+        - tests
+    tmpDir: var/phpstan

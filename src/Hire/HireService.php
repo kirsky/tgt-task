@@ -60,11 +60,10 @@ final class HireService
 
         if ($newcomerId === null) {
             $req = HireTaskParser::parse($title, $description);
-            if ($req === HireTaskParser::NOT_HIRE) {
-                return null;
-            }
-            if ($req === HireTaskParser::BAD_FORMAT) {
-                $this->reject($hireTaskId, 'bad_format', 'Не смог разобрать задачу. Нужны строки: «Должность: …», «Подразделение: …», «Дата выхода: ДД.ММ.ГГГГ».');
+            if (!$req instanceof HireRequest) {
+                if ($req === HireTaskParser::BAD_FORMAT) {
+                    $this->reject($hireTaskId, 'bad_format', 'Не смог разобрать задачу. Нужны строки: «Должность: …», «Подразделение: …», «Дата выхода: ДД.ММ.ГГГГ».');
+                }
 
                 return null;
             }
@@ -80,7 +79,7 @@ final class HireService
         $this->createMissingTasks($newcomerId);
 
         if ($done === null) {
-            $code = (string) $this->db->query("SELECT invite_code FROM newcomers WHERE id = $newcomerId")->fetchColumn();
+            $code = (string) \App\Sql::value($this->db, "SELECT invite_code FROM newcomers WHERE id = $newcomerId");
             $this->tasks->comment($hireTaskId, "Личная ссылка для новичка в боте «Новичок»: {$this->inviteLink($code)}\nКарточка: {$this->appUrl}/n/$newcomerId");
             $this->markProcessed($hireTaskId, 'ok', $newcomerId);
         }
@@ -121,13 +120,16 @@ final class HireService
      */
     private function createMissingTasks(int $newcomerId): void
     {
-        $n = $this->db->query("SELECT * FROM newcomers WHERE id = $newcomerId")->fetch();
+        $n = \App\Sql::one($this->db, "SELECT * FROM newcomers WHERE id = $newcomerId");
+        if ($n === null) {
+            throw new \RuntimeException("Newcomer $newcomerId not found");
+        }
         $role = $this->roles->get($n['role_key']);
         $short = HireRequest::short($n['full_name']);
-        $start = \DateTimeImmutable::createFromFormat('Y-m-d', $n['start_date'])->format('d.m.Y');
+        $start = (new \DateTimeImmutable($n['start_date']))->format('d.m.Y');
         $save = $this->db->prepare('UPDATE agreements SET bitrix_task_id = ?, updated_at = ? WHERE id = ?');
 
-        $rows = $this->db->query("SELECT id, key, due_date FROM agreements WHERE newcomer_id = $newcomerId AND bitrix_task_id IS NULL ORDER BY id")->fetchAll();
+        $rows = \App\Sql::all($this->db, "SELECT id, key, due_date FROM agreements WHERE newcomer_id = $newcomerId AND bitrix_task_id IS NULL ORDER BY id");
         foreach ($rows as $row) {
             $a = $this->roles->agreement($n['role_key'], $row['key']);
             $taskId = $this->tasks->create([

@@ -75,7 +75,11 @@ final class Router
         }
     }
 
-    /** 503 page shown when an action needs Bitrix24 and it is unreachable. */
+    /**
+     * 503 page shown when an action needs Bitrix24 and it is unreachable.
+     *
+     * @param array<string,mixed> $session
+     */
     private function unavailable(array $session): Response
     {
         return new Response(503, $this->views->page('message', [
@@ -84,7 +88,12 @@ final class Router
         ]));
     }
 
-    /** Checks the panel password and starts the session. */
+    /**
+     * Checks the panel password and starts the session.
+     *
+     * @param array<string,mixed> $post
+     * @param array<string,mixed> $session
+     */
     private function login(array $post, array &$session): Response
     {
         $expected = (string) $this->c->config()->get('PANEL_PASSWORD');
@@ -97,7 +106,11 @@ final class Router
         return $this->page('login', ['title' => 'Вход', 'error' => 'Неверный пароль'], $session);
     }
 
-    /** Ends the session. */
+    /**
+     * Ends the session.
+     *
+     * @param array<string,mixed> $session
+     */
     private function logout(array &$session): Response
     {
         unset($session['auth']);
@@ -105,13 +118,17 @@ final class Router
         return Response::redirect('/login');
     }
 
-    /** List of newcomers on probation with KPIs and the demo bar. */
+    /**
+     * List of newcomers on probation with KPIs and the demo bar.
+     *
+     * @param array<string,mixed> $session
+     */
     private function home(array $session): Response
     {
         $c = $this->c;
         $now = $c->clock()->now();
         $this->refreshExamplesDaily();
-        $rows = $c->db()->query('SELECT * FROM newcomers ORDER BY is_example, start_date DESC, id DESC')->fetchAll();
+        $rows = \App\Sql::all($c->db(), 'SELECT * FROM newcomers ORDER BY is_example, start_date DESC, id DESC');
         $list = [];
         foreach ($rows as $n) {
             $day = $c->schedule()->dayNumber($n['start_date'], $now);
@@ -191,10 +208,10 @@ final class Router
     private function agreementRows(int $newcomerId, string $roleKey, \DateTimeImmutable $now): array
     {
         $role = $this->c->roles()->get($roleKey);
-        $rows = $this->c->db()->query(
+        $rows = \App\Sql::all($this->c->db(), 
             "SELECT g.*, CASE WHEN d.id IS NULL THEN NULL WHEN d.resolved_at IS NULL THEN 1 ELSE 0 END AS dispute_open, d.bitrix_task_id AS dispute_task_id
              FROM agreements g LEFT JOIN disputes d ON d.agreement_id = g.id WHERE g.newcomer_id = $newcomerId ORDER BY g.day, g.id"
-        )->fetchAll();
+        );
         $s = $this->c->schedule();
         foreach ($rows as &$r) {
             $r['def'] = $this->c->roles()->agreement($roleKey, $r['key']);
@@ -204,11 +221,15 @@ final class Router
         return $rows;
     }
 
-    /** One newcomer: invite link + QR, agreements by day with history and live Bitrix24 status. */
+    /**
+     * One newcomer: invite link + QR, agreements by day with history and live Bitrix24 status.
+     *
+     * @param array<string,mixed> $session
+     */
     private function card(int $id, array $session): Response
     {
         $c = $this->c;
-        $n = $c->db()->query("SELECT * FROM newcomers WHERE id = $id")->fetch();
+        $n = \App\Sql::one($c->db(), "SELECT * FROM newcomers WHERE id = $id");
         if (!$n) {
             return $this->notFound($session);
         }
@@ -216,7 +237,7 @@ final class Router
         $agreements = $this->agreementRows($id, $n['role_key'], $now);
 
         $answers = [];
-        foreach ($c->db()->query("SELECT a.* FROM answers a JOIN agreements g ON g.id = a.agreement_id WHERE g.newcomer_id = $id ORDER BY a.id")->fetchAll() as $a) {
+        foreach (\App\Sql::all($c->db(), "SELECT a.* FROM answers a JOIN agreements g ON g.id = a.agreement_id WHERE g.newcomer_id = $id ORDER BY a.id") as $a) {
             $answers[$a['agreement_id']][] = $a;
         }
 
@@ -248,13 +269,21 @@ final class Router
         ], $session);
     }
 
-    /** Agreement lists per role and the methodology. */
+    /**
+     * Agreement lists per role and the methodology.
+     *
+     * @param array<string,mixed> $session
+     */
     private function roles(array $session): Response
     {
         return $this->page('roles', ['title' => 'Договорённости по ролям', 'roles' => $this->c->roles(), 'portal' => $this->c->portal()], $session);
     }
 
-    /** Demo actions (only with `DEMO=1`). */
+    /**
+     * Demo actions (only with `DEMO=1`).
+     *
+     * @param array<string,mixed> $post
+     */
     private function demo(string $path, array $post): Response
     {
         $demo = $this->c->demo();
@@ -281,7 +310,7 @@ final class Router
         }
         if (preg_match('~^/demo/close/(\d+)$~', $path, $m)) {
             $demo->closeAsOwner((int) $m[1]);
-            $nid = $this->c->db()->query('SELECT newcomer_id FROM agreements WHERE id = ' . (int) $m[1])->fetchColumn();
+            $nid = \App\Sql::value($this->c->db(), 'SELECT newcomer_id FROM agreements WHERE id = ' . (int) $m[1]);
 
             return Response::redirect($nid ? "/n/$nid" : '/');
         }
@@ -289,13 +318,22 @@ final class Router
         return $this->notFound([]);
     }
 
-    /** 404 page. */
+    /**
+     * 404 page.
+     *
+     * @param array<string,mixed> $session
+     */
     private function notFound(array $session): Response
     {
         return new Response(404, $this->views->page('message', ['title' => 'Не найдено', 'message' => 'Такой страницы нет.', 'readonly' => false, 'csrf' => $session['csrf'] ?? '']));
     }
 
-    /** Renders a page with the common variables (CSRF token, Bitrix24 status, demo flag). */
+    /**
+     * Renders a page with the common variables (CSRF token, Bitrix24 status, demo flag).
+     *
+     * @param array<string,mixed> $vars
+     * @param array<string,mixed> $session
+     */
     private function page(string $template, array $vars, array $session): Response
     {
         return new Response(200, $this->views->page($template, $vars + [

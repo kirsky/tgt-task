@@ -44,7 +44,11 @@ final class TransitionsTest extends TestCase
         }
     }
 
-    /** Applies one answer and checks the resulting state and effects. */
+    /**
+     * Applies one answer and checks the resulting state and effects.
+     *
+     * @param list<Effect> $effects
+     */
     #[DataProvider('rows')]
     public function test_transitions(State $from, Answer $answer, State $to, array $effects): void
     {

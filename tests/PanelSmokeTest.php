@@ -33,6 +33,11 @@ final class PanelSmokeTest extends TestCase
         return $this->router->dispatch('GET', $path, [], $this->session);
     }
 
+    /**
+     * Submits a form, adding the session's CSRF token unless told not to.
+     *
+     * @param array<string,mixed> $data
+     */
     private function post(string $path, array $data, bool $csrf = true): \App\Web\Response
     {
         if ($csrf) {
@@ -90,7 +95,7 @@ final class PanelSmokeTest extends TestCase
         $r = $this->post('/demo/hire', ['full_name' => 'Петров Алексей', 'role' => 'warehouse_picker', 'start_date' => '2026-11-17']);
         self::assertSame(302, $r->status);
         self::assertMatchesRegularExpression('~^/n/\d+$~', $r->headers['Location']);
-        self::assertCount(9, $this->c->tasks()->callsOf('create'));
+        self::assertCount(9, TestApp::tasks($this->c)->callsOf('create'));
 
         $card = $this->get($r->headers['Location'])->body;
         self::assertStringContainsString('<svg', $card);
@@ -115,7 +120,7 @@ final class PanelSmokeTest extends TestCase
         $this->login();
         $r = $this->post('/demo/hire', ['full_name' => 'X Y', 'role' => 'warehouse_picker', 'start_date' => '2026-11-17'], csrf: false);
         self::assertSame(403, $r->status);
-        self::assertSame([], $this->c->tasks()->calls);
+        self::assertSame([], TestApp::tasks($this->c)->calls);
     }
 
     /** Unknown pages are a 404, not an error. */

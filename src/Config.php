@@ -66,6 +66,14 @@ final class Config
     }
 
     /**
+     * Returns a value, or the given default when the key is missing or empty.
+     */
+    public function string(string $key, string $default): string
+    {
+        return $this->get($key) ?? $default;
+    }
+
+    /**
      * Returns a value that must be present.
      *
      * @throws \RuntimeException When the key is missing or empty.

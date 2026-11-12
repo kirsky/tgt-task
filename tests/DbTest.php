@@ -19,11 +19,11 @@ final class DbTest extends TestCase
         $db = Db::open(':memory:');
         Db::migrate($db);
 
-        $tables = $db->query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")->fetchAll(\PDO::FETCH_COLUMN);
+        $tables = \App\Sql::column($db, "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
         foreach (['agreements', 'answers', 'chat_state', 'disputes', 'kv', 'newcomers', 'processed_hire_tasks'] as $t) {
             self::assertContains($t, $tables);
         }
-        self::assertSame('1', (string) $db->query('PRAGMA foreign_keys')->fetchColumn());
+        self::assertSame('1', (string) \App\Sql::value($db, 'PRAGMA foreign_keys'));
     }
 
     public function test_kv_roundtrip(): void

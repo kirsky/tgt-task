@@ -27,7 +27,7 @@ final class BitrixClientTest extends TestCase
      * Client whose transport replays the given responses in order and records calls.
      *
      * @param list<array{status:int, body:string}|\Throwable> $responses
-     * @param list<array{0:string,1:array}> $calls Filled with [url, params] per call.
+     * @param list<array{0:string,1:array<string,mixed>}> $calls Filled with [url, params] per call.
      */
     private function client(array $responses, array &$calls = []): BitrixClient
     {
@@ -36,6 +36,9 @@ final class BitrixClientTest extends TestCase
             $r = array_shift($responses);
             if ($r instanceof \Throwable) {
                 throw $r;
+            }
+            if ($r === null) {
+                throw new \LogicException('No more fake responses');
             }
 
             return $r;
@@ -73,7 +76,7 @@ final class BitrixClientTest extends TestCase
             ['status' => 503, 'body' => '{"error":"QUERY_LIMIT_EXCEEDED"}'],
             ['status' => 200, 'body' => '{"result":true}'],
         ], $calls);
-        self::assertSame(true, $c->call('tasks.task.complete', ['taskId' => 1]));
+        self::assertTrue($c->call('tasks.task.complete', ['taskId' => 1]));
         self::assertCount(2, $calls);
     }
 

@@ -18,7 +18,12 @@ final class LabelsTest extends TestCase
         return new \DateTimeImmutable($s, new \DateTimeZone('Europe/Minsk'));
     }
 
-    /** Label of a row at 2026-11-20 12:00, asked at 19.11 20:15, deadline 19.11 20:00 unless given. */
+    /**
+     * Label of a row at 2026-11-20 12:00, asked at 25.11 20:15, deadline 19.11 20:00 unless given.
+     *
+     * @param array<string,mixed> $row
+     * @return array{text: string, tone: string}
+     */
     private function label(array $row, string $deadline = '2026-11-19 20:00'): array
     {
         return Labels::agreement($row + ['first_answer' => null, 'dispute_open' => null], $this->t('2026-11-20 12:00'), $this->t('2026-11-25 20:15'), $this->t($deadline));
