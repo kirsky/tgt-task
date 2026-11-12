@@ -59,6 +59,9 @@ final class BotFlowTest extends TestCase
             $req = $h['request'];
             $body = (string) $req->getBody();
             $params = json_decode($body, true);
+            if (!is_array($params) && preg_match_all('/name="([^"]+)"\r\n\r\n(.*?)\r\n--/s', $body, $m)) {
+                $params = array_combine($m[1], $m[2]); // multipart (e.g. editMessageText)
+            }
             if (!is_array($params)) {
                 parse_str($body, $params);
             }
@@ -117,6 +120,24 @@ final class BotFlowTest extends TestCase
         $this->bot->hearCallbackQueryData('a:' . $this->agreementId('met') . ':yes')->reply();
         self::assertCount(1, $this->tasks->callsOf('complete'));
         self::assertSame(['Тебе выдали спецодежду и обувь?'], $this->texts());
+    }
+
+    /**
+     * After a tap the question keeps the chosen answer (buttons are replaced by «Твой ответ: Да»),
+     * so the chat history shows what the newcomer answered.
+     */
+    public function test_answered_question_shows_the_answer(): void
+    {
+        $this->start();
+        $met = $this->agreementId('met');
+        $this->bot->hearUpdateType(\SergiX44\Nutgram\Telegram\Properties\UpdateType::CALLBACK_QUERY, [
+            'data' => "a:$met:yes",
+            'message' => ['message_id' => 42, 'date' => 1794450000, 'text' => "С первым рабочим днём! Уточню пару вещей.\n\nТебя встретили и показали рабочее место?"],
+        ])->reply();
+        $edits = array_values(array_filter($this->sent(), fn ($s) => $s['method'] === 'editMessageText'));
+        self::assertCount(1, $edits);
+        self::assertSame(42, (int) $edits[0]['params']['message_id']);
+        self::assertStringEndsWith("Тебя встретили и показали рабочее место?\n\n<i>Твой ответ: Да</i>", $edits[0]['params']['text']);
     }
 
     /** «Частично» → note prompt → note → comment with the note → «Спасибо, учли.» → next question. */

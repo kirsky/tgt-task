@@ -7,6 +7,7 @@ namespace App\Bot;
 use App\Container;
 use App\Domain\Answer;
 use SergiX44\Nutgram\Nutgram;
+use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 
 /**
  * Wires Telegram updates to {@see Conversation}.
@@ -49,30 +50,45 @@ final class Handlers
                 return;
             }
             if (preg_match('/^a:(\d+):(yes|partial|no)$/', $data, $m)) {
-                self::dropButtons($bot);
-                $conv->answer($chatId, (int) $m[1], Answer::from($m[2]));
+                $answer = Answer::from($m[2]);
+                self::closeQuestion($bot, 'Твой ответ: ' . $answer->label());
+                $conv->answer($chatId, (int) $m[1], $answer);
 
                 return;
             }
             if (preg_match('/^skip:(\d+)$/', $data, $m)) {
-                self::dropButtons($bot);
+                self::closeQuestion($bot, 'Пропущено');
                 $conv->skip($chatId, (int) $m[1]);
             }
         });
     }
 
     /**
-     * Removes the inline buttons from the message that was tapped, so old questions
-     * cannot be answered twice by accident. Failures (message too old) are ignored.
+     * Replaces the buttons of the tapped question with the chosen answer («Твой ответ: Да»),
+     * so the chat keeps a readable history and an old question cannot be answered twice
+     * by accident. Without the message text, only the buttons are removed. Failures (e.g. a
+     * message too old to edit) are ignored.
+     *
+     * @param string $outcome Line appended in italics, e.g. «Твой ответ: Частично».
      */
-    private static function dropButtons(Nutgram $bot): void
+    private static function closeQuestion(Nutgram $bot, string $outcome): void
     {
         $msg = $bot->callbackQuery()?->message;
         if ($msg === null) {
             return;
         }
         try {
-            $bot->editMessageReplyMarkup(chat_id: $bot->chatId(), message_id: $msg->message_id);
+            $text = $msg->text ?? null;
+            if (is_string($text) && $text !== '') {
+                $bot->editMessageText(
+                    text: Texts::e($text) . "\n\n<i>" . Texts::e($outcome) . '</i>',
+                    chat_id: $bot->chatId(),
+                    message_id: $msg->message_id,
+                    parse_mode: ParseMode::HTML,
+                );
+            } else {
+                $bot->editMessageReplyMarkup(chat_id: $bot->chatId(), message_id: $msg->message_id);
+            }
         } catch (\Throwable) {
         }
     }
