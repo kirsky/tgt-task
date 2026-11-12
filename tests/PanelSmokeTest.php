@@ -99,6 +99,16 @@ final class PanelSmokeTest extends TestCase
         self::assertStringContainsString('Следующий опрос сейчас', $card);
     }
 
+    /** «Сбросить примеры» fills the list with the five examples, marked «пример». */
+    public function test_reset_examples_button(): void
+    {
+        $this->login();
+        self::assertSame(302, $this->post('/demo/reset-examples', [])->status);
+        $body = $this->get('/')->body;
+        self::assertStringContainsString('На испытательном сроке · 5', $body);
+        self::assertSame(5, substr_count($body, '>пример<'));
+    }
+
     /** POST without the CSRF token is rejected and does nothing. */
     public function test_csrf(): void
     {

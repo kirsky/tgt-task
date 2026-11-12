@@ -241,6 +241,11 @@ final class Router
 
             return Response::redirect('/n/' . $demo->hire($name, $role, $start));
         }
+        if ($path === '/demo/reset-examples') {
+            \App\Demo\Examples::reset($this->c->db(), $this->c->roles(), $this->c->schedule(), $this->c->clock());
+
+            return Response::redirect('/');
+        }
         if (preg_match('~^/demo/next/(\d+)$~', $path, $m)) {
             $demo->nextBatch((int) $m[1]);
 

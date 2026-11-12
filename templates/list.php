@@ -28,6 +28,10 @@ use App\Web\Views;
     <input type="date" name="start_date" value="<?= Views::e($today) ?>" required aria-label="Дата выхода">
     <button <?= $readonly ? 'disabled title="Действия с задачами временно недоступны"' : '' ?>>➕ Принять нового сотрудника</button>
   </form>
+  <form method="post" action="/demo/reset-examples" class="row">
+    <input type="hidden" name="csrf" value="<?= Views::e($csrf) ?>">
+    <button class="small">↺ Сбросить примеры</button> <span class="muted">«пример» — вымышленные новички в разных ситуациях, без задач в Битрикс24; обновляются каждую ночь.</span>
+  </form>
 </section>
 <?php endif ?>
 
