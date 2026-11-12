@@ -25,6 +25,7 @@ class FakeTasks implements Tasks
     private int $nextId = 1000;
     private int $callNo = 0;
     private ?int $failOn = null;
+    private ?int $timeoutAfterCreateOn = null;
 
     /**
      * Makes the n-th call from now (1-based, counting all methods) throw {@see BitrixUnavailable}.
@@ -32,6 +33,15 @@ class FakeTasks implements Tasks
     public function failOnCall(int $n): void
     {
         $this->failOn = $this->callNo + $n;
+    }
+
+    /**
+     * Makes the n-th call from now, if it is a create, succeed in "Bitrix24" but throw as if the
+     * response timed out — the task exists although the caller never learned its id.
+     */
+    public function timeoutAfterCreateOnCall(int $n): void
+    {
+        $this->timeoutAfterCreateOn = $this->callNo + $n;
     }
 
     /**
@@ -65,8 +75,24 @@ class FakeTasks implements Tasks
         $id = $this->nextId++;
         $this->created[$id] = $fields;
         $this->status[$id] = 2;
+        if ($this->timeoutAfterCreateOn === $this->callNo) {
+            $this->timeoutAfterCreateOn = null;
+            throw new BitrixUnavailable('fake read timeout after create');
+        }
 
         return $id;
+    }
+
+    public function findByXmlId(string $xmlId): ?int
+    {
+        $this->hit('findByXmlId', [$xmlId]);
+        foreach ($this->created as $id => $fields) {
+            if (($fields['XML_ID'] ?? null) === $xmlId) {
+                return $id;
+            }
+        }
+
+        return null;
     }
 
     public function complete(int $id): void

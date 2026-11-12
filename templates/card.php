@@ -30,7 +30,7 @@ $dis = $readonly ? ' disabled title="Действия с задачами вре
   <div class="card-body d-flex flex-wrap gap-4 justify-content-between">
     <div class="flex-grow-1" style="min-width: 18rem; max-width: 42rem">
       <h1 class="h4 mb-1"><?= Views::e($n['full_name']) ?> <?php if ($n['is_example']): ?><span class="<?= Views::badge('wait') ?> align-middle fs-6">пример</span><?php endif ?></h1>
-      <p class="text-body-secondary mb-3"><i class="bi bi-briefcase me-1"></i><?= Views::e($role['title']) ?> · <?= Views::e($role['department']) ?> · выход <?= Views::e(date('d.m.Y', (int) strtotime($n['start_date']))) ?> · <?= $day < 1 ? 'ещё не вышел' : 'день ' . $day . '/90' ?></p>
+      <p class="text-body-secondary mb-3"><i class="bi bi-briefcase me-1"></i><?= Views::e($role['title']) ?> · <?= Views::e($role['department']) ?> · выход <?= Views::e(Views::time($n['start_date'], 'd.m.Y')) ?> · <?= $day < 1 ? 'ещё не вышел' : 'день ' . $day . '/90' ?></p>
 
       <?php if ($link): ?>
         <label for="invite-link" class="form-label small text-body-secondary mb-1">Личная ссылка на бота для новичка</label>
@@ -79,7 +79,7 @@ $dis = $readonly ? ' disabled title="Действия с задачами вре
             <?php if ($a['dispute_task_id']): ?> · <a href="<?= Views::e($tasks->url((int) $a['dispute_task_id'])) ?>" target="_blank" rel="noopener"><i class="bi bi-person-badge me-1"></i>задача HR</a><?php endif ?>
           </div>
           <?php foreach ($answers[$a['id']] ?? [] as $ans): ?>
-            <div class="history"><i class="bi bi-chat-left-text me-1"></i><?= Views::e(date('d.m H:i', (int) strtotime($ans['created_at']))) ?> · <?= $ans['kind'] === 'recheck' ? 'после закрытия: ' : '' ?>«<?= Views::e($labelOf($ans['answer'])) ?>»<?= $ans['note'] !== null ? ': «' . Views::e($ans['note']) . '»' : '' ?></div>
+            <div class="history"><i class="bi bi-chat-left-text me-1"></i><?= Views::e(Views::time($ans['created_at'], 'd.m H:i')) ?> · <?= $ans['kind'] === 'recheck' ? 'после закрытия: ' : '' ?>«<?= Views::e($labelOf($ans['answer'])) ?>»<?= $ans['note'] !== null ? ': «' . Views::e($ans['note']) . '»' : '' ?></div>
           <?php endforeach ?>
         </div>
         <div class="col-md-3 text-md-end">

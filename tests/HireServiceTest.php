@@ -88,6 +88,28 @@ final class HireServiceTest extends TestCase
         self::assertCount(1, $this->tasks->callsOf('comment'));
     }
 
+    /**
+     * A create whose response timed out (the task exists in Bitrix24, we have no id) is found by
+     * its XML_ID on retry instead of being created twice.
+     */
+    public function test_read_timeout_on_create_does_not_duplicate(): void
+    {
+        $this->tasks->timeoutAfterCreateOnCall(3);
+        try {
+            $this->hire->process(77, self::TITLE, self::DESC);
+            self::fail('expected BitrixUnavailable');
+        } catch (BitrixUnavailable) {
+        }
+        $id = TestApp::id($this->hire->process(77, self::TITLE, self::DESC));
+
+        self::assertCount(8, $this->tasks->created, 'eight tasks in Bitrix24, no duplicate');
+        $ids = \App\Sql::column($this->c->db(), 'SELECT bitrix_task_id FROM agreements WHERE newcomer_id = ? ORDER BY id', [$id]);
+        self::assertSame(array_keys($this->tasks->created), array_map('intval', $ids));
+        foreach ($this->tasks->created as $fields) {
+            self::assertMatchesRegularExpression('/^novichok-agreement-\d+$/', $fields['XML_ID']);
+        }
+    }
+
     /** An unknown position gets one explanatory comment and is never processed again. */
     public function test_unknown_role_comments_once(): void
     {

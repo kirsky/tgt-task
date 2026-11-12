@@ -38,6 +38,16 @@ final class LabelsTest extends TestCase
         self::assertSame(['задача', 'задачи', 'задач', 'задач', 'задач'], [$g(1), $g(3), $g(8), $g(12), $g(0)]);
     }
 
+    /** Times are shown in Minsk time whatever the server's time zone is. */
+    public function test_time_is_shown_in_minsk(): void
+    {
+        $tz = date_default_timezone_get();
+        date_default_timezone_set('UTC');
+        self::assertSame('12.11 13:14', \App\Web\Views::time('2026-11-12T10:14:00+00:00', 'd.m H:i'));
+        self::assertSame('12.11.2026', \App\Web\Views::time('2026-11-12', 'd.m.Y'));
+        date_default_timezone_set($tz);
+    }
+
     /** One assertion per label text and tone. */
     public function test_labels(): void
     {

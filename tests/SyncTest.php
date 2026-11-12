@@ -191,6 +191,31 @@ final class SyncTest extends TestCase
         self::assertSame(\App\Bot\Texts::freeText(), json_decode((string) end($history)['request']->getBody(), true)['text'] ?? null, 'late text is no longer taken as the note');
     }
 
+    /** A hire task that Bitrix24 rejects permanently is recorded and does not block the next one. */
+    public function test_broken_hire_task_does_not_block_others(): void
+    {
+        $broken = new class extends \Tests\Support\FakeTasks {
+            public function comment(int $id, string $text): void
+            {
+                if ($id === 90) {
+                    throw new \App\Bitrix\BitrixError('task 90: access denied');
+                }
+                parent::comment($id, $text);
+            }
+        };
+        $broken->hireTasks = [
+            ['id' => 90, 'title' => 'Приём: Сломанный Пример', 'description' => "Должность: Продавец-консультант\nПодразделение: Магазин\nДата выхода: 18.11.2026"],
+            ['id' => 91, 'title' => 'Приём: Савич Анна', 'description' => "Должность: Продавец-консультант\nПодразделение: Магазин\nДата выхода: 18.11.2026"],
+        ];
+        $this->c->set('tasks', $broken);
+        $this->c->set('hire', null);
+        $this->c->set('poller', null);
+
+        self::assertSame(1, $this->c->poller()->pollHires());
+        self::assertSame('91', $this->c->kv()->get('last_hire_task_id'));
+        self::assertSame('error', \App\Sql::value($this->c->db(), 'SELECT status FROM processed_hire_tasks WHERE task_id = 90'));
+    }
+
     /** HR completing the dispute task marks the dispute resolved. */
     public function test_dispute_resolution(): void
     {

@@ -73,7 +73,7 @@ $tiles = [
           <div class="small text-body-secondary"><?= Views::e($role['title']) ?> · <?= Views::e($role['department']) ?></div>
         </div>
         <div class="col-md-2 small text-body-secondary">
-          <?= $n['day'] < 1 ? 'выход ' . Views::e(date('d.m', (int) strtotime($n['start_date']))) : 'день ' . (int) $n['day'] . '/90' ?>
+          <?= $n['day'] < 1 ? 'выход ' . Views::e(Views::time($n['start_date'], 'd.m')) : 'день ' . (int) $n['day'] . '/90' ?>
           <div class="progress probation mt-1" role="progressbar" aria-label="испытательный срок"><div class="progress-bar" style="width:<?= max(0, min(100, (int) round($n['day'] / 90 * 100))) ?>%"></div></div>
         </div>
         <div class="col-md-6 d-flex flex-wrap gap-1">

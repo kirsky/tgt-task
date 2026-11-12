@@ -191,7 +191,9 @@ final class AnswerService
 
     /**
      * Hands a «закрыто, но не получено» case to HR and records the dispute.
-     * The owner's task is deliberately left closed: HR talks to both sides.
+     * The owner's task is deliberately left closed: HR talks to both sides. The HR task has
+     * `XML_ID` = `novichok-dispute-<agreement id>` and is looked up first, so a retry after a
+     * lost response never creates a second one.
      *
      * @param array<string,mixed> $row Joined answer/agreement/newcomer row.
      */
@@ -199,13 +201,15 @@ final class AnswerService
     {
         $a = $this->roles->agreement($row['role_key'], $row['key']);
         $label = Answer::from($row['answer'])->label();
-        $id = $this->tasks->create([
+        $xmlId = 'novichok-dispute-' . $row['agreement_id'];
+        $id = $this->tasks->findByXmlId($xmlId) ?? $this->tasks->create([
             'TITLE' => "Закрыто, но не получено: {$a['task_title']} — " . HireRequest::short($row['full_name']),
             'RESPONSIBLE_ID' => $this->portal['owners']['hr'],
             'DEADLINE' => $this->clock->now()->modify('+24 hours')->format(DATE_ATOM),
             'DESCRIPTION' => "Ответственный закрыл задачу «{$a['task_title']}» ({$this->tasks->url($ownerTask)}), "
                 . "но новичок ответил «{$label}»$suffix\nКарточка: {$this->appUrl}/n/{$row['newcomer_id']}",
             'TAGS' => ['новичок', 'договорённость'],
+            'XML_ID' => $xmlId,
         ]);
         $this->db->prepare('INSERT OR IGNORE INTO disputes(agreement_id, bitrix_task_id, created_at) VALUES(?,?,?)')
             ->execute([$row['agreement_id'], $id, $this->now()]);

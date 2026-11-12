@@ -108,6 +108,20 @@ final class Views
         return '/build/' . $file . '?v=' . hash('crc32b', $file . $mtime);
     }
 
+    /**
+     * Formats a stored date or ISO datetime in the company time zone (Europe/Minsk),
+     * independent of the server's default time zone.
+     *
+     * @param string $value  `Y-m-d` or ISO-8601 datetime.
+     * @param string $format PHP date format, e.g. `d.m H:i`.
+     */
+    public static function time(string $value, string $format): string
+    {
+        $tz = new \DateTimeZone(\App\Clock::TZ);
+
+        return (new \DateTimeImmutable($value, $tz))->setTimezone($tz)->format($format);
+    }
+
     /** HTML-escapes a value for templates. */
     public static function e(mixed $v): string
     {

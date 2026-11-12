@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Sync;
 
+use App\Bitrix\BitrixError;
 use App\Bitrix\Tasks;
 use App\Clock;
 use App\Domain\State;
@@ -39,8 +40,13 @@ final class Poller
     {
         $created = 0;
         foreach ($this->tasks->newHireTasks((int) $this->kv->get(self::HIRE_CURSOR)) as $t) {
-            if ($this->hire->process($t['id'], $t['title'], $t['description']) !== null) {
-                $created++;
+            try {
+                if ($this->hire->process($t['id'], $t['title'], $t['description']) !== null) {
+                    $created++;
+                }
+            } catch (BitrixError) {
+                // rejected for good (e.g. no access to this task): record it and move on
+                $this->hire->markFailed($t['id']);
             }
             $this->advanceCursor($t['id']);
         }

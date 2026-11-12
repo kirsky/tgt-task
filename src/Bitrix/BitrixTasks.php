@@ -75,6 +75,15 @@ final class BitrixTasks implements Tasks
     }
 
     /** {@inheritDoc} */
+    public function findByXmlId(string $xmlId): ?int
+    {
+        $res = $this->client->call('tasks.task.list', ['filter' => ['XML_ID' => $xmlId], 'select' => ['ID']]);
+        $id = $res['tasks'][0]['id'] ?? null;
+
+        return $id === null ? null : (int) $id;
+    }
+
+    /** {@inheritDoc} */
     public function url(int $id): string
     {
         return $this->client->portalBase() . "/company/personal/user/1/tasks/task/view/$id/";

@@ -49,6 +49,7 @@ final class HireService
      * @return int|null Newcomer id, or null when the task is not usable (not a hire task,
      *                  bad format, unknown role — the last two get one explanatory comment).
      * @throws \App\Bitrix\BitrixUnavailable When the portal fails; call again later to resume.
+     * @throws \App\Bitrix\BitrixError       When the portal rejects a call for this task for good.
      */
     public function process(int $hireTaskId, string $title, string $description): ?int
     {
@@ -57,6 +58,7 @@ final class HireService
             return null;
         }
         $newcomerId = $this->newcomerByHireTask($hireTaskId);
+        $retry = $newcomerId !== null;
 
         if ($newcomerId === null) {
             $req = HireTaskParser::parse($title, $description);
@@ -76,7 +78,7 @@ final class HireService
             $newcomerId = $this->createNewcomer($hireTaskId, $req, $roleKey);
         }
 
-        $this->createMissingTasks($newcomerId);
+        $this->createMissingTasks($newcomerId, $retry);
 
         if ($done === null) {
             $code = (string) \App\Sql::value($this->db, "SELECT invite_code FROM newcomers WHERE id = $newcomerId");
@@ -116,9 +118,13 @@ final class HireService
 
     /**
      * Creates owner tasks for agreements that do not have one yet, saving each id immediately
-     * so a failure in the middle loses nothing.
+     * so a failure in the middle loses nothing. Every task carries `XML_ID` =
+     * `novichok-agreement-<id>`; on a retry the app first looks the task up by it, because a
+     * create whose response timed out may already exist in Bitrix24.
+     *
+     * @param bool $retry Whether an earlier attempt for this hire may have created some tasks.
      */
-    private function createMissingTasks(int $newcomerId): void
+    private function createMissingTasks(int $newcomerId, bool $retry): void
     {
         $n = \App\Sql::one($this->db, "SELECT * FROM newcomers WHERE id = $newcomerId");
         if ($n === null) {
@@ -132,6 +138,12 @@ final class HireService
         $rows = \App\Sql::all($this->db, "SELECT id, key, due_date FROM agreements WHERE newcomer_id = $newcomerId AND bitrix_task_id IS NULL ORDER BY id");
         foreach ($rows as $row) {
             $a = $this->roles->agreement($n['role_key'], $row['key']);
+            $xmlId = 'novichok-agreement-' . $row['id'];
+            $existing = $retry ? $this->tasks->findByXmlId($xmlId) : null;
+            if ($existing !== null) {
+                $save->execute([$existing, $this->clock->now()->format(DATE_ATOM), $row['id']]);
+                continue;
+            }
             $taskId = $this->tasks->create([
                 'TITLE' => "{$a['task_title']} — $short (новичок, {$role['department']})",
                 'RESPONSIBLE_ID' => $this->portal['owners'][$a['owner']],
@@ -142,9 +154,19 @@ final class HireService
                     . "Карточка: {$this->appUrl}/n/$newcomerId\n\n"
                     . 'Закроется автоматически, когда новичок подтвердит получение.',
                 'TAGS' => ['новичок', 'договорённость'],
+                'XML_ID' => $xmlId,
             ]);
             $save->execute([$taskId, $this->clock->now()->format(DATE_ATOM), $row['id']]);
         }
+    }
+
+    /**
+     * Records a hire task that failed permanently (Bitrix24 rejected a call for it), so the
+     * poller moves on to the next one.
+     */
+    public function markFailed(int $hireTaskId): void
+    {
+        $this->markProcessed($hireTaskId, 'error', null);
     }
 
     /** Comments why a hire task cannot be used and records it so the comment is posted once. */

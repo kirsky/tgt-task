@@ -47,6 +47,14 @@ interface Tasks
     public function newHireTasks(int $afterId): array;
 
     /**
+     * Finds a task by the external id we gave it at creation (`XML_ID`). Used before retrying a
+     * create whose response was lost, so a task is never created twice.
+     *
+     * @return int|null Task id, or null when no such task exists.
+     */
+    public function findByXmlId(string $xmlId): ?int;
+
+    /**
      * Link to open the task in the portal.
      */
     public function url(int $id): string;

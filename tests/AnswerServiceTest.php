@@ -102,6 +102,19 @@ final class AnswerServiceTest extends TestCase
         self::assertNull($dispute['resolved_at']);
     }
 
+    /** An HR task whose create response timed out is found on retry, not created twice. */
+    public function test_hr_task_not_duplicated_after_timeout(): void
+    {
+        [$a] = $this->agreement('scanner', 'owner_closed');
+        $this->tasks->timeoutAfterCreateOnCall(2); // call 1: lookup by XML_ID, call 2: the create
+        $this->answers->finalize(TestApp::noteAnswerId($this->answers->record($a, Answer::No)), 'нет логина');
+        self::assertSame(1, $this->answers->retryPending());
+
+        $hr = array_filter($this->tasks->created, fn ($f) => str_starts_with($f['TITLE'], 'Закрыто, но не получено'));
+        self::assertCount(1, $hr);
+        self::assertSame((int) array_key_first($hr), (int) \App\Sql::value($this->c->db(), 'SELECT bitrix_task_id FROM disputes WHERE agreement_id = ?', [$a]));
+    }
+
     /** An answer to an already confirmed agreement is ignored (stale or double tap). */
     public function test_ignored_when_confirmed(): void
     {
