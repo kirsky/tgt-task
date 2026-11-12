@@ -54,6 +54,13 @@ final class Router
             return new Response(403, 'Форма устарела, обновите страницу.');
         }
 
+        // Read-only mode: while Bitrix24 is unreachable, refuse actions that need it
+        // (the cron clears the flag as soon as a call succeeds again).
+        if ($method === 'POST' && str_starts_with($path, '/demo/') && $path !== '/demo/reset-examples'
+            && $this->c->kv()->get(BitrixClient::DOWN_FLAG) !== null) {
+            return $this->unavailable($session);
+        }
+
         try {
             return match (true) {
                 $method === 'GET' && $path === '/' => $this->home($session),
@@ -64,11 +71,17 @@ final class Router
                 default => $this->notFound($session),
             };
         } catch (BitrixUnavailable) {
-            return new Response(503, $this->views->page('message', [
-                'title' => 'Битрикс24 недоступен', 'readonly' => true, 'csrf' => $session['csrf'],
-                'message' => 'Битрикс24 сейчас недоступен, действия с задачами временно недоступны. Данные панели сохранены.',
-            ]));
+            return $this->unavailable($session);
         }
+    }
+
+    /** 503 page shown when an action needs Bitrix24 and it is unreachable. */
+    private function unavailable(array $session): Response
+    {
+        return new Response(503, $this->views->page('message', [
+            'title' => 'Битрикс24 недоступен', 'readonly' => true, 'csrf' => $session['csrf'] ?? '', 'authed' => true,
+            'message' => 'Действия с задачами временно недоступны: Битрикс24 не отвечает. Данные панели сохранены, бот продолжает работать.',
+        ]));
     }
 
     /** Checks the panel password and starts the session. */
