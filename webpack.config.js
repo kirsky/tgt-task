@@ -1,3 +1,5 @@
+'use strict';
+
 /**
  * Builds the HR panel assets into public/build: Bootstrap 5 (SCSS + JS), Bootstrap Icons,
  * the self-hosted Onest font and the panel's own styles and scripts.

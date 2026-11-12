@@ -21,7 +21,10 @@ $tiles = [
     ['bi-telegram', $kpi['notConnected'], 'не подключились к боту', $kpi['notConnected'] ? 'kpi-warning' : 'kpi-muted'],
 ];
 ?>
-<p class="text-body-secondary mb-4">Каждая договорённость с новичком — задача ответственному в Битрикс24. Новичок в Telegram подтверждает, что получил то, о чём договорились («Да / Частично / Нет»). Если задачу закрыли, а новичок не получил — разбирается HR.</p>
+<div class="mb-4">
+  <h1 class="h3 page-title mb-1">На испытательном сроке</h1>
+  <p class="text-body-secondary mb-0">Каждая договорённость с новичком — задача ответственному в Битрикс24. Новичок в Telegram подтверждает, что получил то, о чём договорились («Да / Частично / Нет»). Если задачу закрыли, а новичок не получил — разбирается HR.</p>
+</div>
 
 <?php if ($demo): ?>
 <div class="card demo-bar mb-4">
@@ -59,7 +62,7 @@ $tiles = [
 </div>
 
 <div class="card">
-  <div class="card-header"><h2 class="h6 mb-0 py-1"><i class="bi bi-people me-2 text-primary"></i>На испытательном сроке · <?= count($newcomers) ?></h2></div>
+  <div class="card-header"><h2 class="h6 mb-0 py-1"><i class="bi bi-people me-2 text-primary"></i>Новички · <?= count($newcomers) ?></h2></div>
   <?php if (!$newcomers): ?><div class="card-body text-body-secondary">Пока никого. Примите сотрудника в демо-панели выше.</div><?php endif ?>
   <div class="list-group list-group-flush">
     <?php foreach ($newcomers as $n): $role = $roles->get($n['role_key']); ?>

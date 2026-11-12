@@ -139,9 +139,28 @@ final class PanelSmokeTest extends TestCase
         $this->login();
         self::assertSame(302, $this->post('/demo/reset-examples', [])->status);
         $body = $this->get('/')->body;
-        self::assertStringContainsString('На испытательном сроке · 5', $body);
+        self::assertStringContainsString('Новички · 5', $body);
         self::assertSame(5, substr_count($body, 'пример</span>'));
         self::assertStringContainsString('Примеры обновлены', $body);
+    }
+
+    /**
+     * Static files are cached for a year, so asset URLs carry a version that changes with
+     * every build; otherwise browsers keep showing an old stylesheet.
+     */
+    public function test_assets_are_versioned(): void
+    {
+        $body = $this->get('/login')->body;
+        self::assertMatchesRegularExpression('~href="/build/app\.css\?v=[0-9a-f]{8,}"~', $body);
+        self::assertMatchesRegularExpression('~src="/build/app\.js\?v=[0-9a-f]{8,}"~', $body);
+    }
+
+    /** The header highlights the current section. */
+    public function test_header_marks_active_section(): void
+    {
+        $this->login();
+        self::assertMatchesRegularExpression('~<a class="nav-link active"[^>]*href="/"~', $this->get('/')->body);
+        self::assertMatchesRegularExpression('~<a class="nav-link active"[^>]*href="/roles"~', $this->get('/roles')->body);
     }
 
     /** POST without the CSRF token is rejected and does nothing. */

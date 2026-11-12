@@ -1,8 +1,8 @@
 <?php
 /**
- * Page shell (Bootstrap 5): navbar with product name, read-only banner, confirmation
- * message of the previous action, content, footer. Assets are built by webpack into
- * public/build (npm run build).
+ * Page shell (Bootstrap 5): coloured app header with brand and section pills, read-only
+ * banner, confirmation message of the previous action, content, footer. Assets are built
+ * by webpack into public/build and referenced with a build version (see Views::asset()).
  *
  * @var string      $title
  * @var string      $content
@@ -10,9 +10,14 @@
  * @var bool        $authed
  * @var bool        $readonly
  * @var string|null $flash
+ * @var string      $active   Current section: `home`, `roles` or empty.
  */
 use App\Web\Views;
 
+$nav = [
+    'home' => ['/', 'bi-people', 'На испытательном'],
+    'roles' => ['/roles', 'bi-card-checklist', 'Договорённости по ролям'],
+];
 ?><!doctype html>
 <html lang="ru">
 <head>
@@ -21,33 +26,37 @@ use App\Web\Views;
 <meta name="robots" content="noindex,nofollow">
 <title><?= Views::e($title) ?> · Новичок</title>
 <script>document.documentElement.setAttribute('data-bs-theme', matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');</script>
-<link rel="stylesheet" href="/build/app.css">
-<script src="/build/app.js" defer></script>
+<link rel="stylesheet" href="<?= Views::e(Views::asset('app.css')) ?>">
+<script src="<?= Views::e(Views::asset('app.js')) ?>" defer></script>
 </head>
 <body>
-<nav class="navbar navbar-expand-md navbar-glass sticky-top">
-  <div class="container">
-    <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-      <span class="brand-mark"><i class="bi bi-person-check"></i></span>
-      <span><b>Новичок</b> <span class="brand-tagline">· как договаривались</span></span>
+<header class="app-header">
+  <div class="container d-flex flex-wrap align-items-center gap-3 py-3">
+    <a class="brand d-flex align-items-center gap-2 me-lg-4 text-decoration-none" href="/">
+      <span class="brand-mark"><i class="bi bi-person-check-fill"></i></span>
+      <span class="lh-sm">
+        <span class="brand-name d-block">Новичок</span>
+        <span class="brand-tagline d-block">как договаривались</span>
+      </span>
     </a>
     <?php if (!empty($authed)): ?>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Меню">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="nav">
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-people me-1"></i>На испытательном</a></li>
-        <li class="nav-item"><a class="nav-link" href="/roles"><i class="bi bi-card-checklist me-1"></i>Договорённости по ролям</a></li>
-      </ul>
-      <form method="post" action="/logout" class="d-flex">
+    <ul class="nav nav-pills app-nav flex-nowrap">
+      <?php foreach ($nav as $key => [$href, $icon, $label]): ?>
+      <li class="nav-item">
+        <a class="nav-link<?= ($active ?? '') === $key ? ' active' : '' ?>" <?= ($active ?? '') === $key ? 'aria-current="page" ' : '' ?>href="<?= $href ?>"><i class="bi <?= $icon ?> me-1"></i><?= Views::e($label) ?></a>
+      </li>
+      <?php endforeach ?>
+    </ul>
+    <div class="app-actions ms-auto d-flex align-items-center gap-2">
+      <span class="header-chip d-none d-sm-inline-flex"><i class="bi bi-person-badge me-1"></i>HR · демо</span>
+      <form method="post" action="/logout" class="m-0">
         <input type="hidden" name="csrf" value="<?= Views::e($csrf) ?>">
-        <button type="submit" class="btn btn-link nav-link"><i class="bi bi-box-arrow-right me-1"></i>Выйти</button>
+        <button type="submit" class="btn btn-sm btn-light"><i class="bi bi-box-arrow-right me-1"></i>Выйти</button>
       </form>
     </div>
     <?php endif ?>
   </div>
-</nav>
+</header>
 <?php if (!empty($readonly)): ?>
 <div class="alert alert-warning rounded-0 text-center mb-0 fw-semibold"><i class="bi bi-cloud-slash me-2"></i>Битрикс24 недоступен — панель в режиме просмотра. Действия с задачами временно недоступны.</div>
 <?php endif ?>

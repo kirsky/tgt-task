@@ -90,6 +90,21 @@ final class Views
         return $mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14) ? $few : $many;
     }
 
+    /**
+     * URL of a built asset with a version derived from the file's build time.
+     * Static files are served with a one-year cache, so the version is what makes
+     * browsers and Cloudflare fetch a new build.
+     *
+     * @param string $file File name inside `public/build`, e.g. `app.css`.
+     */
+    public static function asset(string $file): string
+    {
+        $path = dirname(__DIR__, 2) . '/public/build/' . $file;
+        $mtime = is_file($path) ? (string) filemtime($path) : '0';
+
+        return '/build/' . $file . '?v=' . hash('crc32b', $file . $mtime);
+    }
+
     /** HTML-escapes a value for templates. */
     public static function e(mixed $v): string
     {

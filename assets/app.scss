@@ -37,30 +37,91 @@ html[data-bs-theme='dark'] {
   background: linear-gradient(140deg, #0f172a 0%, #1e1b4b 55%, #042f2e 100%);
 }
 
-.navbar-glass {
-  background: rgb(255 255 255 / 75%);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgb(79 70 229 / 12%);
+.app-header {
+  color: #fff;
+  background: linear-gradient(100deg, #4338ca 0%, #4f46e5 45%, #0e7490 100%);
+  box-shadow: 0 6px 24px rgb(67 56 202 / 25%);
 }
 
-[data-bs-theme='dark'] .navbar-glass {
-  background: rgb(15 23 42 / 75%);
-  border-bottom-color: rgb(165 180 252 / 15%);
+.app-header .brand {
+  color: #fff;
 }
 
-.brand-mark {
+.app-header .brand-mark {
   display: inline-grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.6rem;
-  color: #fff;
-  background: linear-gradient(135deg, $primary, $info);
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.75rem;
+  font-size: 1.25rem;
+  color: #4338ca;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
 }
 
-.brand-tagline {
-  color: var(--bs-secondary-color);
-  font-weight: 400;
+.app-header .brand-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.app-header .brand-tagline {
+  font-size: 0.8rem;
+  color: rgb(255 255 255 / 75%);
+}
+
+.app-nav .nav-link {
+  white-space: nowrap;
+  color: rgb(255 255 255 / 85%);
+  border-radius: 0.6rem;
+  font-weight: 500;
+}
+
+.app-nav .nav-link:hover,
+.app-nav .nav-link:focus {
+  color: #fff;
+  background: rgb(255 255 255 / 12%);
+}
+
+.app-nav .nav-link.active {
+  color: #312e81;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+}
+
+.app-nav {
+  order: 3;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.app-actions {
+  order: 2;
+}
+
+@include media-breakpoint-up(lg) {
+  .app-nav {
+    order: 1;
+    width: auto;
+  }
+}
+
+.header-chip {
+  align-items: center;
+  padding: 0.3rem 0.65rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  color: #fff;
+  background: rgb(255 255 255 / 15%);
+}
+
+[data-bs-theme='dark'] .app-header {
+  background: linear-gradient(100deg, #1e1b4b 0%, #312e81 50%, #134e4a 100%);
+}
+
+.page-title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .card {

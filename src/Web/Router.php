@@ -350,6 +350,11 @@ final class Router
 
         return new Response(200, $this->views->page($template, $vars + [
             'flash' => $flash,
+            'active' => match ($template) {
+                'roles' => 'roles',
+                'list', 'card' => 'home',
+                default => '',
+            },
             'csrf' => $session['csrf'] ?? '',
             'authed' => !empty($session['auth']),
             'demo' => $this->c->demoEnabled(),
