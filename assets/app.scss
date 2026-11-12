@@ -1,31 +1,142 @@
-// HR panel theme on top of Bootstrap 5.
+// HR panel theme on top of Bootstrap 5: Onest font, indigo/teal accents, soft gradient background.
 
-$primary: #2563eb;
-$border-radius: .6rem;
-$border-radius-lg: .8rem;
-$font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+$primary: #4f46e5;
+$info: #0891b2;
+$success: #16a34a;
+$warning: #d97706;
+$danger: #dc2626;
+$font-family-sans-serif:
+  'Onest Variable',
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  roboto,
+  sans-serif;
+$border-radius: 0.6rem;
+$border-radius-lg: 0.9rem;
+$card-border-width: 0;
+$card-cap-bg: transparent;
+$badge-font-weight: 500;
+$badge-padding-y: 0.4em;
+$badge-padding-x: 0.6em;
+$badge-border-radius: 0.3rem;
 
-@import "bootstrap/scss/bootstrap";
+@import 'bootstrap/scss/bootstrap';
 
-body { background: var(--bs-tertiary-bg); }
+// The gradient sits on <html> so it covers the whole page height, not just the first screen.
+html {
+  min-height: 100%;
+  background: linear-gradient(140deg, #eef2ff 0%, #f5f3ff 35%, #ecfeff 100%);
+}
 
-.brand-tagline { color: var(--bs-secondary-color); font-weight: 400; }
+body {
+  background: transparent;
+}
 
-// KPI tiles
-.kpi .value { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
-.kpi .caption { color: var(--bs-secondary-color); font-size: .8rem; }
+html[data-bs-theme='dark'] {
+  background: linear-gradient(140deg, #0f172a 0%, #1e1b4b 55%, #042f2e 100%);
+}
 
-// probation progress in the list
-.progress.probation { height: 6px; width: 90px; }
+.navbar-glass {
+  background: rgb(255 255 255 / 75%);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgb(79 70 229 / 12%);
+}
 
-// agreement history lines under a question
-.history { font-size: .8rem; color: var(--bs-secondary-color); }
+[data-bs-theme='dark'] .navbar-glass {
+  background: rgb(15 23 42 / 75%);
+  border-bottom-color: rgb(165 180 252 / 15%);
+}
 
-// QR code on the newcomer card
-.qr svg { width: 168px; height: 168px; background: #fff; border-radius: .5rem; padding: .35rem; }
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.6rem;
+  color: #fff;
+  background: linear-gradient(135deg, $primary, $info);
+}
 
-// demo bar
-.demo-bar { border: 1px dashed var(--bs-warning); }
+.brand-tagline {
+  color: var(--bs-secondary-color);
+  font-weight: 400;
+}
 
-// status pills keep one line
-.badge { white-space: nowrap; font-weight: 500; }
+.card {
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 6%),
+    0 4px 16px rgb(79 70 229 / 6%);
+}
+
+// KPI tiles: coloured icon bubble + accent line
+.kpi {
+  border-top: 3px solid var(--kpi-color, #{$primary});
+}
+
+.kpi .kpi-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.6rem;
+  color: var(--kpi-color, #{$primary});
+  background: color-mix(in srgb, var(--kpi-color, #{$primary}) 12%, transparent);
+}
+
+.kpi .value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.kpi .caption {
+  color: var(--bs-secondary-color);
+  font-size: 0.82rem;
+}
+
+.kpi-primary {
+  --kpi-color: #{$primary};
+}
+
+.kpi-danger {
+  --kpi-color: #{$danger};
+}
+
+.kpi-warning {
+  --kpi-color: #{$warning};
+}
+
+.kpi-muted {
+  --kpi-color: #{$gray-500};
+}
+
+.progress.probation {
+  height: 6px;
+  width: 96px;
+}
+
+.history {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color);
+}
+
+.qr svg {
+  width: 168px;
+  height: 168px;
+  padding: 0.4rem;
+  border-radius: 0.6rem;
+  background: #fff;
+}
+
+.demo-bar {
+  border-left: 4px solid $warning;
+}
+
+.badge {
+  white-space: nowrap;
+}
+
+.list-group-item-action:hover {
+  background: rgb(79 70 229 / 4%);
+}

@@ -1,6 +1,6 @@
 /**
- * Builds the HR panel assets: Bootstrap 5 (SCSS + JS bundle) and the panel's own styles
- * into public/build/app.css and public/build/app.js.
+ * Builds the HR panel assets into public/build: Bootstrap 5 (SCSS + JS), Bootstrap Icons,
+ * the self-hosted Onest font and the panel's own styles and scripts.
  *
  *   npm ci && npm run build      # production
  *   npm run watch                # development
@@ -12,6 +12,7 @@ module.exports = {
   entry: { app: './assets/app.js' },
   output: {
     path: path.resolve(__dirname, 'public/build'),
+    publicPath: '/build/',
     filename: '[name].js',
     clean: true,
   },
@@ -22,8 +23,22 @@ module.exports = {
         use: [
           MiniCssExtractPlugin.loader,
           'css-loader',
-          { loader: 'sass-loader', options: { sassOptions: { quietDeps: true, silenceDeprecations: ['import', 'global-builtin', 'color-functions'] } } },
+          {
+            loader: 'sass-loader',
+            options: {
+              sassOptions: {
+                quietDeps: true,
+                silenceDeprecations: ['import', 'global-builtin', 'color-functions'],
+              },
+            },
+          },
         ],
+      },
+      {
+        // fonts from @fontsource-variable/onest and bootstrap-icons, served from this server
+        test: /\.(woff2?|ttf|eot)$/,
+        type: 'asset/resource',
+        generator: { filename: 'fonts/[name][ext]' },
       },
     ],
   },

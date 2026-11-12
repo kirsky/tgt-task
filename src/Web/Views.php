@@ -48,11 +48,46 @@ final class Views
     public static function badge(string $tone): string
     {
         return match ($tone) {
-            'ok' => 'badge rounded-pill text-bg-success',
-            'warn' => 'badge rounded-pill text-bg-warning',
-            'bad' => 'badge rounded-pill text-bg-danger',
-            default => 'badge rounded-pill text-bg-secondary',
+            'ok' => 'badge text-bg-success',
+            'warn' => 'badge text-bg-warning',
+            'bad' => 'badge text-bg-danger',
+            default => 'badge text-bg-secondary',
         };
+    }
+
+    /**
+     * A badge with the Bootstrap Icon matching its tone, ready to print.
+     *
+     * @param array{text: string, tone: string} $label
+     */
+    public static function status(array $label): string
+    {
+        $icon = match ($label['tone']) {
+            'ok' => 'bi-check2-circle',
+            'warn' => 'bi-exclamation-circle',
+            'bad' => 'bi-exclamation-triangle',
+            default => 'bi-clock',
+        };
+
+        return '<span class="' . self::badge($label['tone']) . '"><i class="bi ' . $icon . ' me-1"></i>' . self::e($label['text']) . '</span>';
+    }
+
+    /**
+     * Russian plural form for a count: 1 требует, 2 требуют, 5 требуют, 21 требует.
+     *
+     * @param string $one  Form for 1, 21, 31…
+     * @param string $few  Form for 2–4, 22–24…
+     * @param string $many Form for 0, 5–20, 25–30…
+     */
+    public static function plural(int $n, string $one, string $few, string $many): string
+    {
+        $mod10 = $n % 10;
+        $mod100 = $n % 100;
+        if ($mod10 === 1 && $mod100 !== 11) {
+            return $one;
+        }
+
+        return $mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14) ? $few : $many;
     }
 
     /** HTML-escapes a value for templates. */

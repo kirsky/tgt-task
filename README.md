@@ -31,7 +31,9 @@
 
 ## Стек
 
-PHP 8.4, SQLite, [Nutgram](https://nutgram.dev) (Telegram), chillerlan/php-qrcode, PHPUnit. Панель — Bootstrap 5, сборка webpack 5 (`assets/` → `public/build/`).
+PHP 8.4, SQLite, [Nutgram](https://nutgram.dev) (Telegram), chillerlan/php-qrcode. Панель — Bootstrap 5 и Bootstrap Icons, шрифт Onest (раздаётся с сервера), сборка webpack 5 (`assets/` → `public/build/`).
+
+Качество: PHPUnit, PHPStan (уровень 8), ESLint, Prettier, Stylelint.
 
 ```
 src/Domain    состояния договорённости и переходы
@@ -49,9 +51,11 @@ assets        исходники стилей и JS для webpack
 
 ```bash
 composer install
-npm ci && npm run build   # Bootstrap 5 + стили панели → public/build
+npm ci && npm run build   # Bootstrap 5, иконки, шрифт и стили панели → public/build
 cp .env.example ../.env   # секреты лежат вне репозитория
-vendor/bin/phpunit
+
+composer check            # PHPStan + PHPUnit
+npm run lint              # ESLint + Stylelint + Prettier
 ```
 
 Переменные `../.env`: `BITRIX_WEBHOOK_URL`, `BITRIX_PROXY` (необязательно, например `socks5h://127.0.0.1:10811` — облачный Битрикс24 нестабильно отвечает на запросы из-за рубежа), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_PATH`, `TELEGRAM_WEBHOOK_SECRET`, `PANEL_PASSWORD`, `APP_URL`, `DEMO` (1 — включить демо-панель), `DB_PATH` (необязательно).

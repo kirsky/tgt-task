@@ -67,7 +67,7 @@ final class Router
                 $method === 'GET' && $path === '/roles' => $this->roles($session),
                 $method === 'GET' && (bool) preg_match('~^/n/(\d+)$~', $path, $m) => $this->card((int) $m[1], $session),
                 $method === 'POST' && $path === '/logout' => $this->logout($session),
-                $method === 'POST' && str_starts_with($path, '/demo/') && $this->c->demoEnabled() => $this->demo($path, $post),
+                $method === 'POST' && str_starts_with($path, '/demo/') && $this->c->demoEnabled() => $this->demo($path, $post, $session),
                 default => $this->notFound($session),
             };
         } catch (BitrixUnavailable) {
@@ -80,7 +80,7 @@ final class Router
      *
      * @param array<string,mixed> $session
      */
-    private function unavailable(array $session): Response
+    private function unavailable(array &$session): Response
     {
         return new Response(503, $this->views->page('message', [
             'title' => 'Битрикс24 недоступен', 'readonly' => true, 'csrf' => $session['csrf'] ?? '', 'authed' => true,
@@ -123,7 +123,7 @@ final class Router
      *
      * @param array<string,mixed> $session
      */
-    private function home(array $session): Response
+    private function home(array &$session): Response
     {
         $c = $this->c;
         $now = $c->clock()->now();
@@ -185,7 +185,7 @@ final class Router
             $pills[] = ['text' => 'бот не подключён', 'tone' => 'warn'];
         }
         if ($counts['ok']) {
-            $pills[] = ['text' => "{$counts['ok']} ✓", 'tone' => 'ok'];
+            $pills[] = ['text' => "{$counts['ok']} подтверждено", 'tone' => 'ok'];
         }
         if ($disputes) {
             $pills[] = ['text' => "$disputes закрыто, но не получено", 'tone' => 'bad'];
@@ -194,7 +194,7 @@ final class Router
             $pills[] = ['text' => "$overdue просрочено", 'tone' => 'bad'];
         }
         if ($counts['warn'] > 0) {
-            $pills[] = ['text' => "{$counts['warn']} требуют внимания", 'tone' => 'warn'];
+            $pills[] = ['text' => "{$counts['warn']} " . Views::plural($counts['warn'], 'требует', 'требуют', 'требуют') . ' внимания', 'tone' => 'warn'];
         }
 
         return $pills;
@@ -226,7 +226,7 @@ final class Router
      *
      * @param array<string,mixed> $session
      */
-    private function card(int $id, array $session): Response
+    private function card(int $id, array &$session): Response
     {
         $c = $this->c;
         $n = \App\Sql::one($c->db(), "SELECT * FROM newcomers WHERE id = $id");
@@ -265,7 +265,7 @@ final class Router
             'link' => $link,
             'qr' => $qr,
             'short' => HireRequest::short($n['full_name']),
-            'canNext' => !$n['is_example'] && in_array('scheduled', array_column($agreements, 'state'), true),
+            'canNext' => !$n['is_example'] && $n['tg_chat_id'] !== null && in_array('scheduled', array_column($agreements, 'state'), true),
         ], $session);
     }
 
@@ -274,17 +274,18 @@ final class Router
      *
      * @param array<string,mixed> $session
      */
-    private function roles(array $session): Response
+    private function roles(array &$session): Response
     {
         return $this->page('roles', ['title' => 'Договорённости по ролям', 'roles' => $this->c->roles(), 'portal' => $this->c->portal()], $session);
     }
 
     /**
-     * Demo actions (only with `DEMO=1`).
+     * Demo actions (only with `DEMO=1`). Each one leaves a confirmation message for the next page.
      *
      * @param array<string,mixed> $post
+     * @param array<string,mixed> $session
      */
-    private function demo(string $path, array $post): Response
+    private function demo(string $path, array $post, array &$session): Response
     {
         $demo = $this->c->demo();
         if ($path === '/demo/hire') {
@@ -295,27 +296,34 @@ final class Router
                 return new Response(400, 'Заполните ФИО, должность и дату выхода.');
             }
 
-            return Response::redirect('/n/' . $demo->hire($name, $role, $start));
+            $id = $demo->hire($name, $role, $start);
+            $count = count($this->c->roles()->get($role)['agreements']);
+            $session['flash'] = "Сотрудник принят: в Битрикс24 создана задача «Приём» и $count задач ответственным. Отправьте новичку ссылку или QR-код.";
+
+            return Response::redirect('/n/' . $id);
         }
         if ($path === '/demo/reset-examples') {
             \App\Demo\Examples::reset($this->c->db(), $this->c->roles(), $this->c->schedule(), $this->c->clock());
             $this->c->kv()->set('examples_date', $this->c->clock()->now()->format('Y-m-d'));
+            $session['flash'] = 'Примеры обновлены.';
 
             return Response::redirect('/');
         }
         if (preg_match('~^/demo/next/(\d+)$~', $path, $m)) {
             $demo->nextBatch((int) $m[1]);
+            $session['flash'] = 'Вопросы следующего дня отправлены новичку в Telegram.';
 
             return Response::redirect('/n/' . $m[1]);
         }
         if (preg_match('~^/demo/close/(\d+)$~', $path, $m)) {
             $demo->closeAsOwner((int) $m[1]);
+            $session['flash'] = 'Задача закрыта от имени ответственного — новичку отправлен вопрос «Всё так?».';
             $nid = \App\Sql::value($this->c->db(), 'SELECT newcomer_id FROM agreements WHERE id = ' . (int) $m[1]);
 
             return Response::redirect($nid ? "/n/$nid" : '/');
         }
 
-        return $this->notFound([]);
+        return $this->notFound($session);
     }
 
     /**
@@ -323,20 +331,25 @@ final class Router
      *
      * @param array<string,mixed> $session
      */
-    private function notFound(array $session): Response
+    private function notFound(array &$session): Response
     {
         return new Response(404, $this->views->page('message', ['title' => 'Не найдено', 'message' => 'Такой страницы нет.', 'readonly' => false, 'csrf' => $session['csrf'] ?? '']));
     }
 
     /**
-     * Renders a page with the common variables (CSRF token, Bitrix24 status, demo flag).
+     * Renders a page with the common variables (CSRF token, Bitrix24 status, demo flag) and
+     * shows (then forgets) the confirmation message left by the previous action.
      *
      * @param array<string,mixed> $vars
      * @param array<string,mixed> $session
      */
-    private function page(string $template, array $vars, array $session): Response
+    private function page(string $template, array $vars, array &$session): Response
     {
+        $flash = is_string($session['flash'] ?? null) ? $session['flash'] : null;
+        unset($session['flash']);
+
         return new Response(200, $this->views->page($template, $vars + [
+            'flash' => $flash,
             'csrf' => $session['csrf'] ?? '',
             'authed' => !empty($session['auth']),
             'demo' => $this->c->demoEnabled(),

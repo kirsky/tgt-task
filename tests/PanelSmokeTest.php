@@ -101,7 +101,36 @@ final class PanelSmokeTest extends TestCase
         self::assertStringContainsString('<svg', $card);
         self::assertStringContainsString('https://t.me/novichok_promises_bot?start=', $card);
         self::assertStringContainsString('Тебе выдали спецодежду и обувь?', $card);
+        self::assertStringContainsString('Сотрудник принят', $card, 'confirmation after the action');
+        self::assertMatchesRegularExpression('~data-copy="#invite-link"[^>]*>.*Скопировать~su', $card, 'invite link has a copy button');
+        self::assertStringNotContainsString('Следующий опрос сейчас', $card, 'no «next questions» while the bot is not connected');
+        self::assertStringContainsString('Вопросы начнут приходить после того, как новичок откроет ссылку', $card);
+    }
+
+    /** Once the newcomer has connected the bot, the demo can send the next questions. */
+    public function test_next_button_only_when_connected(): void
+    {
+        $this->login();
+        $r = $this->post('/demo/hire', ['full_name' => 'Петров Алексей', 'role' => 'warehouse_picker', 'start_date' => '2026-11-17']);
+        $id = (int) substr($r->headers['Location'], 3);
+        $this->c->db()->exec("UPDATE newcomers SET tg_chat_id = 555 WHERE id = $id");
+        $card = $this->get("/n/$id")->body;
         self::assertStringContainsString('Следующий опрос сейчас', $card);
+        self::assertStringContainsString('Бот подключён', $card);
+    }
+
+    /** The panel uses Bootstrap Icons and regular badges: no emoji, no pill badges. */
+    public function test_no_emoji_and_no_pills(): void
+    {
+        $this->login();
+        $this->post('/demo/reset-examples', []);
+        $r = $this->post('/demo/hire', ['full_name' => 'Петров Алексей', 'role' => 'warehouse_picker', 'start_date' => '2026-11-17']);
+        foreach (['/', '/roles', $r->headers['Location'], '/login'] as $path) {
+            $body = $this->get($path)->body;
+            self::assertDoesNotMatchRegularExpression('/[➕⏩✔✓↺←📍👤🎒]/u', $body, $path);
+            self::assertStringNotContainsString('rounded-pill', $body, $path);
+        }
+        self::assertStringContainsString('bi bi-person-plus', $this->get('/')->body);
     }
 
     /** «Сбросить примеры» fills the list with the five examples, marked «пример». */
@@ -111,7 +140,8 @@ final class PanelSmokeTest extends TestCase
         self::assertSame(302, $this->post('/demo/reset-examples', [])->status);
         $body = $this->get('/')->body;
         self::assertStringContainsString('На испытательном сроке · 5', $body);
-        self::assertSame(5, substr_count($body, '>пример<'));
+        self::assertSame(5, substr_count($body, 'пример</span>'));
+        self::assertStringContainsString('Примеры обновлены', $body);
     }
 
     /** POST without the CSRF token is rejected and does nothing. */

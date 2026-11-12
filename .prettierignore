@@ -1,0 +1,9 @@
+vendor/
+node_modules/
+public/build/
+var/
+docs/
+composer.lock
+package-lock.json
+*.php
+composer.json

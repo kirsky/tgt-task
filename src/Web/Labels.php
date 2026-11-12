@@ -27,8 +27,8 @@ final class Labels
             'scheduled' => ['text' => 'спросим ' . $askAt->format('d.m'), 'tone' => 'wait'],
             'asked' => $late ? ['text' => 'просрочено', 'tone' => 'bad'] : ['text' => 'ждём ответа', 'tone' => 'wait'],
             'confirmed' => in_array($row['first_answer'], [null, 'yes'], true)
-                ? ['text' => '✓ подтвердил', 'tone' => 'ok']
-                : ['text' => '✓ со 2-го раза', 'tone' => 'ok'],
+                ? ['text' => 'подтвердил', 'tone' => 'ok']
+                : ['text' => 'со 2-го раза', 'tone' => 'ok'],
             'not_received' => $late ? ['text' => 'просрочено', 'tone' => 'bad'] : ['text' => 'не получено', 'tone' => 'warn'],
             'owner_closed' => ['text' => 'закрыто, ждём подтверждения', 'tone' => 'wait'],
             'disputed' => (int) $row['dispute_open'] === 0 && $row['dispute_open'] !== null

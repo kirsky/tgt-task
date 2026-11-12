@@ -4,17 +4,31 @@
   "description": "HR panel assets: Bootstrap 5 built with webpack 5",
   "scripts": {
     "build": "webpack --mode production",
-    "watch": "webpack --mode development --watch"
+    "watch": "webpack --mode development --watch",
+    "lint:js": "eslint .",
+    "lint:css": "stylelint \"assets/**/*.scss\"",
+    "format": "prettier --write \"assets/**/*.{js,scss}\" \"*.{js,json}\"",
+    "format:check": "prettier --check \"assets/**/*.{js,scss}\" \"*.{js,json}\"",
+    "lint": "npm run lint:js && npm run lint:css && npm run format:check"
   },
   "dependencies": {
+    "@fontsource-variable/onest": "^5.3.1",
     "@popperjs/core": "^2.11.8",
-    "bootstrap": "^5.3.9"
+    "bootstrap": "^5.3.9",
+    "bootstrap-icons": "^1.13.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "css-loader": "^7.1.2",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.5.0",
     "mini-css-extract-plugin": "^2.9.2",
+    "prettier": "^3.10.1",
     "sass": "^1.83.0",
     "sass-loader": "^16.0.4",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard-scss": "^15.0.1",
     "webpack": "^5.112.2",
     "webpack-cli": "^6.0.1"
   }

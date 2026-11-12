@@ -34,7 +34,7 @@ final class ReadOnlyModeTest extends TestCase
 
         $home = $router->dispatch('GET', '/', [], $session)->body;
         self::assertStringContainsString('Битрикс24 недоступен', $home);
-        self::assertMatchesRegularExpression('~<button[^>]* disabled title="Действия с задачами временно недоступны">➕ Принять нового сотрудника~u', $home);
+        self::assertMatchesRegularExpression('~<button[^>]* disabled title="Действия с задачами временно недоступны">(?:<i[^>]*></i>)?Принять нового сотрудника~u', $home);
 
         $r = $router->dispatch('POST', '/demo/hire', ['full_name' => 'X Y', 'role' => 'warehouse_picker', 'start_date' => '2026-11-27', 'csrf' => $session['csrf']], $session);
         self::assertSame(503, $r->status);
