@@ -6,7 +6,7 @@
 ![Bitrix24 REST](https://img.shields.io/badge/Bitrix24-REST%20API-2FC6F6)
 ![Telegram Bot API](https://img.shields.io/badge/Telegram-Bot%20API-26A5E4?logo=telegram&logoColor=white)
 ![PHPStan level 8](https://img.shields.io/badge/PHPStan-level%208-4F46E5)
-![Tests](https://img.shields.io/badge/tests-123%20passed-16A34A)
+[![CI](https://github.com/kirsky/tgt-task/actions/workflows/ci.yml/badge.svg)](https://github.com/kirsky/tgt-task/actions/workflows/ci.yml)
 ![Bootstrap 5](https://img.shields.io/badge/Bootstrap-5-7952B3?logo=bootstrap&logoColor=white)
 
 **Демо:** [novichok.indigit.info](https://novichok.indigit.info) (пароль — в отчёте) · **бот:** [@novichok_promises_bot](https://t.me/novichok_promises_bot)
@@ -204,7 +204,7 @@ sequenceDiagram
 
 | Проверка | Инструмент | Команда |
 |---|---|---|
-| Тесты | PHPUnit — 123 теста, бот через fake Telegram API, Битрикс24 через fake-шлюз | `composer test` |
+| Тесты | PHPUnit — 123 теста (запускаются в GitHub Actions на каждый push), бот через fake Telegram API, Битрикс24 через fake-шлюз | `composer test` |
 | Статический анализ | PHPStan, уровень 8 | `composer stan` |
 | Фронтенд | ESLint (с проверкой устаревших API), Stylelint, Prettier | `npm run lint` |
 
