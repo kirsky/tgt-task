@@ -10,6 +10,7 @@ namespace App;
  */
 final class Container
 {
+    /** Repository root. */
     public const ROOT = __DIR__ . '/..';
 
     /** @var array<string,mixed> */
@@ -36,9 +37,16 @@ final class Container
      */
     public static function boot(): self
     {
-        $env = getenv('APP_ENV_FILE') ?: dirname(self::ROOT) . '/.env';
+        return new self(Config::load(self::envPath()));
+    }
 
-        return new self(Config::load($env));
+    /**
+     * Path of the secrets file: `APP_ENV_FILE` if set, otherwise `.env` in the folder
+     * that contains the repository (kept outside git on purpose).
+     */
+    public static function envPath(): string
+    {
+        return getenv('APP_ENV_FILE') ?: dirname(__DIR__, 2) . '/.env';
     }
 
     /**
@@ -107,6 +115,18 @@ final class Container
     public function schedule(): Schedule
     {
         return $this->once('schedule', fn () => new Schedule());
+    }
+
+    /** Bitrix24 REST client over the inbound webhook from `BITRIX_WEBHOOK_URL`. */
+    public function bitrix(): Bitrix\BitrixClient
+    {
+        return $this->once('bitrix', fn () => new Bitrix\BitrixClient($this->cfg->require('BITRIX_WEBHOOK_URL'), $this->kv()));
+    }
+
+    /** Gateway to Bitrix24 tasks (replaced by a fake in tests). */
+    public function tasks(): Bitrix\Tasks
+    {
+        return $this->once('tasks', fn () => new Bitrix\BitrixTasks($this->bitrix()));
     }
 
     /** Public URL of the HR panel, without trailing slash. */
