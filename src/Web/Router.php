@@ -141,6 +141,7 @@ final class Router
         return $this->page('list', [
             'title' => 'На испытательном сроке',
             'kpi' => Kpi::compute($c->db(), $c->schedule(), $c->roles(), $c->clock()),
+            'weak' => array_slice(array_values(array_filter(WeakSpots::compute($c->db(), $c->roles()), fn ($w) => $w['failed'] > 0)), 0, 5),
             'newcomers' => $list,
             'roles' => $c->roles(),
             'demoName' => self::DEMO_NAMES[array_rand(self::DEMO_NAMES)],

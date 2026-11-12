@@ -4,6 +4,7 @@
  *
  * @var array{onTimePct: ?int, overdue: int, closedNotReceived: int, notConnected: int} $kpi
  * @var list<array<string,mixed>> $newcomers
+ * @var list<array{role: string, question: string, asked: int, failed: int, pct: int}> $weak
  * @var \App\Roles   $roles
  * @var string       $demoName
  * @var string       $today
@@ -60,6 +61,31 @@ $tiles = [
   </div>
   <?php endforeach ?>
 </div>
+
+<?php if ($weak): ?>
+<div class="card mb-4">
+  <div class="card-header">
+    <h2 class="h6 mb-0 pt-1"><i class="bi bi-diagram-3 me-2 text-danger"></i>Где договорённости не выполняются с первого раза</h2>
+    <div class="small text-body-secondary pb-1">Если одно и то же «Нет» повторяется у разных новичков — чинить нужно процесс, а не одну задачу.</div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <tbody>
+      <?php foreach ($weak as $w): ?>
+        <tr>
+          <td class="ps-3"><div class="fw-semibold"><?= Views::e($w['question']) ?></div><div class="small text-body-secondary"><?= Views::e($w['role']) ?></div></td>
+          <td class="text-nowrap small text-body-secondary"><?= $w['failed'] ?> из <?= $w['asked'] ?> — «Частично» или «Нет» с первого раза</td>
+          <td class="pe-3" style="width: 9rem">
+            <div class="progress" role="progressbar" aria-label="доля невыполненных с первого раза" style="height: 8px"><div class="progress-bar bg-danger" style="width: <?= $w['pct'] ?>%"></div></div>
+            <div class="small text-end mt-1"><?= $w['pct'] ?>%</div>
+          </td>
+        </tr>
+      <?php endforeach ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+<?php endif ?>
 
 <div class="card">
   <div class="card-header"><h2 class="h6 mb-0 py-1"><i class="bi bi-people me-2 text-primary"></i>Новички · <?= count($newcomers) ?></h2></div>
