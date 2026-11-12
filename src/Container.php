@@ -174,6 +174,18 @@ final class Container
         ));
     }
 
+    /** Demo controls for reviewers (hire, next questions now, close as owner). */
+    public function demo(): Demo\DemoService
+    {
+        return $this->once('demo', fn () => new Demo\DemoService($this));
+    }
+
+    /** Whether demo controls are enabled (`DEMO=1`). */
+    public function demoEnabled(): bool
+    {
+        return $this->cfg->get('DEMO') === '1';
+    }
+
     /** Public URL of the HR panel, without trailing slash. */
     public function appUrl(): string
     {
