@@ -27,6 +27,9 @@ final class Conversation
     /** Callback data of the «Кто видит ответы?» button. */
     public const CB_WHO = 'who';
 
+    /** How long the bot waits for the optional note before moving on without it. */
+    public const NOTE_WAIT = '1 hour';
+
     public function __construct(
         private \PDO $db,
         private Nutgram $bot,
@@ -135,6 +138,29 @@ final class Conversation
             return;
         }
         $this->finishNote($chatId, $answerId, null);
+    }
+
+    /**
+     * Gives up waiting for a note the newcomer never wrote: after {@see NOTE_WAIT} the answer is
+     * finalized without a note (its Bitrix24 comment goes out) and the chat is unblocked.
+     * Nothing is sent to the newcomer — they simply get the next question when it is due.
+     *
+     * @return bool Whether a stale note wait was closed.
+     */
+    public function expireStaleNote(int $chatId): bool
+    {
+        $answerId = $this->awaitingNote($chatId);
+        if ($answerId === null) {
+            return false;
+        }
+        $created = $this->db->query("SELECT created_at FROM answers WHERE id = $answerId")->fetchColumn();
+        if ($created !== false && new \DateTimeImmutable((string) $created) > $this->clock->now()->modify('-' . self::NOTE_WAIT)) {
+            return false;
+        }
+        $this->setAwaitingNote($chatId, null);
+        $this->answers->finalize($answerId, null);
+
+        return true;
     }
 
     /** Handles «Кто видит ответы?». */

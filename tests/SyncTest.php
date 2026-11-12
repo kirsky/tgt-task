@@ -166,6 +166,27 @@ final class SyncTest extends TestCase
         self::assertSame(2, (int) $this->c->db()->query('SELECT COUNT(*) FROM newcomers')->fetchColumn());
     }
 
+    /**
+     * Found in checkpoint 1: a newcomer who answers «Нет» and never writes the note must not
+     * block later questions forever. After an hour the answer is closed without a note,
+     * its Bitrix24 comment is sent, and the queue moves on.
+     */
+    public function test_unanswered_note_expires_after_an_hour(): void
+    {
+        $code = $this->c->db()->query("SELECT invite_code FROM newcomers WHERE id = {$this->newcomerId}")->fetchColumn();
+        $this->bot->hearText("/start $code")->reply();
+        $this->bot->hearCallbackQueryData("a:{$this->id('met')}:no")->reply(); // walks away from «Чего не хватает?»
+
+        self::assertSame([], $this->tickAt('2026-11-17T21:00:00'), 'still waiting within the hour');
+        $sent = $this->tickAt('2026-11-17T21:21:00');
+        self::assertSame(['Тебе выдали спецодежду и обувь?'], $sent);
+        self::assertContains([$this->task('met'), 'Новичок пока не получил.'], $this->tasks->callsOf('comment'));
+
+        $this->bot->hearText('кстати, обуви нет')->reply();
+        $history = $this->bot->getRequestHistory();
+        self::assertSame(\App\Bot\Texts::freeText(), json_decode((string) end($history)['request']->getBody(), true)['text'] ?? null, 'late text is no longer taken as the note');
+    }
+
     /** HR completing the dispute task marks the dispute resolved. */
     public function test_dispute_resolution(): void
     {

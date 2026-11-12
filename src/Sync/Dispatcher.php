@@ -41,6 +41,7 @@ final class Dispatcher
         foreach ($newcomers as $n) {
             $role = $this->roles->get($n['role_key']);
             $chat = (int) $n['tg_chat_id'];
+            $this->conversation->expireStaleNote($chat);
             $this->conversation->queueDue((int) $n['id']);
 
             $open = $this->db->query("SELECT id, prompt_kind, prompt_sent_at, reminded_at FROM agreements WHERE newcomer_id = {$n['id']} AND prompt_sent_at IS NOT NULL")->fetch();
