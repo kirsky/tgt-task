@@ -129,6 +129,15 @@ final class Container
         return $this->once('tasks', fn () => new Bitrix\BitrixTasks($this->bitrix()));
     }
 
+    /** Hire processing: «Приём» task → newcomer, owner tasks, invite. */
+    public function hire(): Hire\HireService
+    {
+        return $this->once('hire', fn () => new Hire\HireService(
+            $this->db(), $this->tasks(), $this->roles(), $this->schedule(), $this->portal(),
+            $this->clock(), $this->appUrl(), $this->botUsername(),
+        ));
+    }
+
     /** Public URL of the HR panel, without trailing slash. */
     public function appUrl(): string
     {
