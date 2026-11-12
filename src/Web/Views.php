@@ -47,12 +47,15 @@ final class Views
      */
     public static function badge(string $tone): string
     {
-        return match ($tone) {
-            'ok' => 'badge text-bg-success',
-            'warn' => 'badge text-bg-warning',
-            'bad' => 'badge text-bg-danger',
-            default => 'badge text-bg-secondary',
+        // "subtle" badges: dark text on a light tint keeps contrast above WCAG AA (4.5:1)
+        $c = match ($tone) {
+            'ok' => 'success',
+            'warn' => 'warning',
+            'bad' => 'danger',
+            default => 'secondary',
         };
+
+        return "badge border bg-$c-subtle text-$c-emphasis border-$c-subtle";
     }
 
     /**

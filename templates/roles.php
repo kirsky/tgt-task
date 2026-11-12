@@ -40,7 +40,7 @@ use App\Web\Views;
       <thead><tr><th class="ps-3">День</th><th>Вопрос новичку</th><th>Задача ответственному</th><th>Кто отвечает</th></tr></thead>
       <tbody>
       <?php foreach ($r['agreements'] as $a): ?>
-        <tr><td class="ps-3"><span class="badge text-bg-primary"><?= (int) $a['day'] ?></span></td><td><?= Views::e($a['question']) ?></td><td><?= Views::e($a['task_title']) ?></td><td><?= Views::e($portal['owner_titles'][$a['owner']] ?? $a['owner']) ?></td></tr>
+        <tr><td class="ps-3"><span class="badge border bg-primary-subtle text-primary-emphasis border-primary-subtle"><?= (int) $a['day'] ?></span></td><td><?= Views::e($a['question']) ?></td><td><?= Views::e($a['task_title']) ?></td><td><?= Views::e($portal['owner_titles'][$a['owner']] ?? $a['owner']) ?></td></tr>
       <?php endforeach ?>
       </tbody>
     </table>

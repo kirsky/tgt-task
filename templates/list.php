@@ -29,7 +29,7 @@ $tiles = [
 <?php if ($demo): ?>
 <div class="card demo-bar mb-4">
   <div class="card-body">
-    <p class="mb-3"><span class="badge text-bg-warning me-2"><i class="bi bi-play-circle me-1"></i>Демо</span>Примите вымышленного сотрудника — в Битрикс24 появится задача «Приём», а у вас — личная ссылка на бота.</p>
+    <p class="mb-3"><span class="<?= Views::badge('warn') ?> me-2"><i class="bi bi-play-circle me-1"></i>Демо</span>Примите вымышленного сотрудника — в Битрикс24 появится задача «Приём», а у вас — личная ссылка на бота.</p>
     <form method="post" action="/demo/hire" class="row g-2 align-items-center">
       <input type="hidden" name="csrf" value="<?= Views::e($csrf) ?>">
       <div class="col-md-4"><input class="form-control" name="full_name" value="<?= Views::e($demoName) ?>" required aria-label="Фамилия Имя"></div>

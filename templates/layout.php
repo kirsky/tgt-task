@@ -40,7 +40,7 @@ $nav = [
       </span>
     </a>
     <?php if (!empty($authed)): ?>
-    <ul class="nav nav-pills app-nav flex-nowrap">
+    <ul class="nav nav-pills app-nav flex-nowrap gap-2">
       <?php foreach ($nav as $key => [$href, $icon, $label]): ?>
       <li class="nav-item">
         <a class="nav-link<?= ($active ?? '') === $key ? ' active' : '' ?>" <?= ($active ?? '') === $key ? 'aria-current="page" ' : '' ?>href="<?= $href ?>"><i class="bi <?= $icon ?> me-1"></i><?= Views::e($label) ?></a>

@@ -39,7 +39,7 @@ html[data-bs-theme='dark'] {
 
 .app-header {
   color: #fff;
-  background: linear-gradient(100deg, #4338ca 0%, #4f46e5 45%, #0e7490 100%);
+  background: linear-gradient(100deg, #4338ca 0%, #4f46e5 45%, #155e75 100%);
   box-shadow: 0 6px 24px rgb(67 56 202 / 25%);
 }
 
@@ -72,7 +72,7 @@ html[data-bs-theme='dark'] {
 
 .app-nav .nav-link {
   white-space: nowrap;
-  color: rgb(255 255 255 / 85%);
+  color: #fff;
   border-radius: 0.6rem;
   font-weight: 500;
 }
@@ -112,7 +112,7 @@ html[data-bs-theme='dark'] {
   border-radius: 0.5rem;
   font-size: 0.8rem;
   color: #fff;
-  background: rgb(255 255 255 / 15%);
+  background: rgb(0 0 0 / 20%);
 }
 
 [data-bs-theme='dark'] .app-header {

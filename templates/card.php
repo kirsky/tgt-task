@@ -29,7 +29,7 @@ $dis = $readonly ? ' disabled title="Действия с задачами вре
 <div class="card mb-4">
   <div class="card-body d-flex flex-wrap gap-4 justify-content-between">
     <div class="flex-grow-1" style="min-width: 18rem; max-width: 42rem">
-      <h1 class="h4 mb-1"><?= Views::e($n['full_name']) ?> <?php if ($n['is_example']): ?><span class="badge text-bg-secondary align-middle fs-6">пример</span><?php endif ?></h1>
+      <h1 class="h4 mb-1"><?= Views::e($n['full_name']) ?> <?php if ($n['is_example']): ?><span class="<?= Views::badge('wait') ?> align-middle fs-6">пример</span><?php endif ?></h1>
       <p class="text-body-secondary mb-3"><i class="bi bi-briefcase me-1"></i><?= Views::e($role['title']) ?> · <?= Views::e($role['department']) ?> · выход <?= Views::e(date('d.m.Y', (int) strtotime($n['start_date']))) ?> · <?= $day < 1 ? 'ещё не вышел' : 'день ' . $day . '/90' ?></p>
 
       <?php if ($link): ?>
@@ -63,7 +63,7 @@ $dis = $readonly ? ' disabled title="Действия с задачами вре
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <h2 class="h6 mb-0 py-1"><i class="bi bi-card-checklist me-2 text-primary"></i>Договорённости</h2>
-    <?php if ($live === null && !$n['is_example']): ?><span class="badge text-bg-warning"><i class="bi bi-cloud-slash me-1"></i>Статусы из Битрикс24 сейчас недоступны</span><?php endif ?>
+    <?php if ($live === null && !$n['is_example']): ?><span class="<?= Views::badge('warn') ?>"><i class="bi bi-cloud-slash me-1"></i>Статусы из Битрикс24 сейчас недоступны</span><?php endif ?>
   </div>
   <ul class="list-group list-group-flush">
     <?php foreach ($agreements as $a): $def = $a['def']; ?>
